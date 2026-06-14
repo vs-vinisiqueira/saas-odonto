@@ -1,0 +1,34 @@
+[project]
+name = "saas-odonto-backend"
+version = "0.1.0"
+description = "Backend do SaaS odontológico (IA + WhatsApp + gestão)"
+requires-python = ">=3.11"
+dependencies = [
+    "fastapi>=0.115",
+    "uvicorn[standard]>=0.30",
+    "sqlalchemy[asyncio]>=2.0.30",
+    "asyncpg>=0.29",
+    "alembic>=1.13",
+    "pydantic-settings>=2.3",
+    "pydantic[email]>=2.7",
+    "pyjwt>=2.8",
+    "bcrypt>=4.1",
+]
+
+[dependency-groups]
+dev = [
+    "pytest>=8.2",
+    "pytest-asyncio>=0.23",
+    "httpx>=0.27",
+    "anyio>=4.4",
+]
+
+# Não é um pacote instalável: rodamos via `uv run uvicorn app.main:app`
+# com o diretório atual no sys.path.
+[tool.uv]
+package = false
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["app/tests"]
+addopts = "-q"
