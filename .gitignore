@@ -19,6 +19,7 @@ venv/
 node_modules/
 apps/web/dist/
 apps/web/.vite/
+*.tsbuildinfo
 
 # OS / editores
 .DS_Store
