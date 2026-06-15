@@ -20,7 +20,7 @@ PostgreSQL.
 | **Pacientes** | ✅ | CRUD escopado por tenant |
 | **Agenda** | ✅ | Disponibilidade, agendar (com checagem de conflito), cancelar |
 | **Cobranças** | ✅ | Pix via gateway (mock) + webhook de confirmação |
-| **Agente de IA** | ✅ | Conversa → consulta horários → agenda, via canal WhatsApp (mock) |
+| **Agente de IA** | ✅ | Conversa → consulta horários → agenda. LLM mock ou **Gemini**; canal mock ou **WhatsApp (Meta)** |
 | **Painel web** | ✅ | Login, Pacientes, Agenda (calendário), Cobranças |
 | **Multi-tenancy** | ✅ | Shared DB + `clinic_id` + RLS (isolamento garantido pelo banco) |
 
@@ -159,7 +159,9 @@ Abra http://localhost:5173 e entre com o login de teste. Telas: **Agenda**
 | `GET` `POST` | `/billing/charges` | Listar / criar cobrança Pix |
 | `POST` | `/billing/charges/{id}/refresh` | Atualizar status no gateway |
 | `POST` | `/billing/webhook` | Confirmação do provedor (sem JWT) |
-| `POST` | `/ai/webhook` | Mensagem recebida pelo canal (agente de IA) |
+| `POST` | `/ai/webhook` | Mensagem recebida pelo canal mock (teste do agente) |
+| `GET` `POST` | `/ai/whatsapp/webhook` | Verificação / recebimento do WhatsApp (Meta) |
+| `GET` `POST` | `/ai/whatsapp/numbers` | Listar / registrar o número da clínica |
 | `GET` | `/health` | Healthcheck |
 
 ### Demo do agente de IA (sem WhatsApp real)
@@ -190,6 +192,38 @@ GEMINI_MODEL=gemini-2.5-flash
 Sem chave (ou com `LLM_PROVIDER=mock`), o agente segue no mock — útil para
 desenvolvimento e testes offline. A execução das tools (`buscar_horarios`/
 `agendar`) continua escopada por tenant (RLS) nos dois casos.
+
+### Conectar o WhatsApp real (Meta Cloud API, grátis)
+
+> 📖 **Passo a passo detalhado:** [`docs/whatsapp-setup.md`](docs/whatsapp-setup.md)
+
+Use o **número de teste** gratuito da Meta (envia para até 5 números verificados).
+
+1. **Meta:** developers.facebook.com → criar app **Business** → adicionar o produto
+   **WhatsApp** → pegar o **número de teste**, o **token** e o **Phone number ID**;
+   adicionar seu celular como destinatário de teste.
+2. **Túnel:** exponha a API local com `ngrok http 8000` (a Meta exige HTTPS público).
+3. **Webhook (painel da Meta):** Callback URL
+   `https://SEU-NGROK/ai/whatsapp/webhook`, Verify token = o mesmo do `.env`,
+   e assine o campo **messages**.
+4. **`.env`:**
+   ```
+   CHANNEL_PROVIDER=meta
+   WHATSAPP_TOKEN=<token>
+   WHATSAPP_PHONE_NUMBER_ID=<phone number id>
+   WHATSAPP_VERIFY_TOKEN=<string à sua escolha>
+   ```
+5. **Ligar o número à clínica** (uma vez, autenticado):
+   ```bash
+   curl -X POST http://localhost:8000/ai/whatsapp/numbers \
+     -H "Authorization: Bearer <ACCESS_TOKEN>" -H "Content-Type: application/json" \
+     -d '{"phone_number_id":"<phone number id>"}'
+   ```
+6. Mande uma mensagem do seu WhatsApp para o número de teste — o agente responde.
+
+O webhook resolve a clínica pelo `phone_number_id` (tabela `whatsapp_numbers` +
+função `SECURITY DEFINER`) e processa em background. Sem credenciais
+(`CHANNEL_PROVIDER=mock`), tudo segue no canal mock.
 
 ---
 
@@ -231,7 +265,7 @@ Hoje rodam mocks; a troca por provedores reais não toca a regra de negócio:
 | Interface | Mock atual | Provedor futuro |
 |-----------|------------|-----------------|
 | `ai_agent/llm/base.LLMProvider` | `MockLLMProvider` (regex) **ou Gemini (real)** | Claude / OpenAI |
-| `ai_agent/channels/base.WhatsAppChannel` | `MockWhatsAppChannel` | Meta (Graph API) |
+| `ai_agent/channels/base.WhatsAppChannel` | `MockWhatsAppChannel` **ou Meta (real)** | (Twilio/360dialog) |
 | `billing/gateway.PaymentGateway` | `MockPaymentGateway` | Mercado Pago / Asaas |
 | `scheduling/calendar_sync.CalendarSync` | `NullCalendarSync` | Google Calendar |
 

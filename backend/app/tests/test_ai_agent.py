@@ -9,10 +9,22 @@ from httpx import ASGITransport, AsyncClient
 
 from app.core.security import hash_password
 from app.main import app
+from app.modules.ai_agent import router as ai_router
+from app.modules.ai_agent.llm.mock import MockLLMProvider
 from app.modules.ai_agent.router import channel
 
 DAY = "2099-01-05"
 PHONE = "+5511970001234"
+
+
+@pytest.fixture(autouse=True)
+def _force_mock_llm():
+    """Estes testes verificam o comportamento DETERMINÍSTICO do agente, então
+    forçam o LLM mock — independente de LLM_PROVIDER no .env (que pode ser gemini)."""
+    original = ai_router.agent._llm
+    ai_router.agent._llm = MockLLMProvider()
+    yield
+    ai_router.agent._llm = original
 
 
 @pytest.fixture

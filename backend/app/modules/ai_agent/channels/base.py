@@ -18,8 +18,12 @@ class InboundMessage:
 
 
 class WhatsAppChannel(ABC):
-    @abstractmethod
-    async def send_text(self, to_number: str, text: str) -> None: ...
+    """Contrato mínimo que o AgentService usa: apenas ENVIAR.
+
+    O PARSE do webhook é específico de cada provedor (formato do payload, e — no
+    caso da Meta — resolução assíncrona do tenant pelo phone_number_id), então
+    fica fora do contrato: cada adapter expõe seus próprios helpers de entrada.
+    """
 
     @abstractmethod
-    def parse_webhook(self, payload: dict) -> InboundMessage: ...
+    async def send_text(self, to_number: str, text: str) -> None: ...

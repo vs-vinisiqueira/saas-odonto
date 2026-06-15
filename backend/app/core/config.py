@@ -28,6 +28,13 @@ class Settings(BaseSettings):
     gemini_api_key: str | None = None
     gemini_model: str = "gemini-2.5-flash"
 
+    # Canal de mensagens. "mock" (default) ou "meta" (WhatsApp Cloud API).
+    channel_provider: str = "mock"
+    whatsapp_token: str | None = None
+    whatsapp_phone_number_id: str | None = None
+    whatsapp_verify_token: str | None = None
+    whatsapp_api_version: str = "v21.0"
+
 
 @lru_cache
 def get_settings() -> Settings:

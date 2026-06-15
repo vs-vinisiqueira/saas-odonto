@@ -8,6 +8,7 @@ from app.modules.billing.router import router as billing_router
 from app.modules.clinics.router import router as clinics_router
 from app.modules.patients.router import router as patients_router
 from app.modules.scheduling.router import router as scheduling_router
+from app.modules.whatsapp.router import router as whatsapp_router
 
 app = FastAPI(title=settings.app_name)
 
@@ -31,3 +32,4 @@ app.include_router(patients_router)
 app.include_router(scheduling_router)
 app.include_router(billing_router)
 app.include_router(ai_agent_router)
+app.include_router(whatsapp_router)
