@@ -9,14 +9,15 @@ from fastapi import APIRouter
 from pydantic import BaseModel, ConfigDict, Field
 
 from app.modules.ai_agent.channels.mock import MockWhatsAppChannel
-from app.modules.ai_agent.llm.mock import MockLLMProvider
+from app.modules.ai_agent.llm.factory import get_llm_provider
 from app.modules.ai_agent.service import AgentService
 
 router = APIRouter(prefix="/ai", tags=["ai_agent"])
 
-# Singletons mock-first (injeção trocável por adapters reais depois).
+# Canal mock-first; o LLM é escolhido por config (mock por padrão, Gemini se
+# houver GEMINI_API_KEY). Ambos trocáveis por adapters reais sem mexer no agente.
 channel = MockWhatsAppChannel()
-agent = AgentService(llm=MockLLMProvider(), channel=channel)
+agent = AgentService(llm=get_llm_provider(), channel=channel)
 
 
 class MockWebhookPayload(BaseModel):

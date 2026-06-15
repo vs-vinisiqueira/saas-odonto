@@ -22,6 +22,12 @@ class Settings(BaseSettings):
     access_token_expire_minutes: int = 30
     refresh_token_expire_days: int = 7
 
+    # Agente de IA (LLM). "mock" (default) usa intenção por regex, sem chave.
+    # "gemini" usa o Google Gemini (precisa de GEMINI_API_KEY).
+    llm_provider: str = "mock"
+    gemini_api_key: str | None = None
+    gemini_model: str = "gemini-2.5-flash"
+
 
 @lru_cache
 def get_settings() -> Settings:

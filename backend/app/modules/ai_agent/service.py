@@ -57,12 +57,23 @@ class AgentService:
                     reply = resp.text or reply
                     break
 
-                messages.append({"role": "assistant", "content": resp.text or ""})
+                # Preserva as tool calls no histórico (formato agnóstico de provedor):
+                # o mock ignora os campos extras; o Gemini precisa deles para o
+                # function-calling multi-turn (functionCall <-> functionResponse).
+                messages.append(
+                    {
+                        "role": "assistant",
+                        "content": resp.text or "",
+                        "tool_calls": resp.tool_calls,
+                    }
+                )
                 for call in resp.tool_calls:
                     result = await tools.execute(
                         session, inbound.tenant_id, patient, call
                     )
-                    messages.append({"role": "tool", "content": result})
+                    messages.append(
+                        {"role": "tool", "name": call.name, "content": result}
+                    )
                     reply = result  # fallback caso o LLM não gere texto final
 
         await self._channel.send_text(inbound.from_number, reply)

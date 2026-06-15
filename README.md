@@ -175,6 +175,22 @@ curl -X POST http://localhost:8000/ai/webhook -H "Content-Type: application/json
 O agente resolve o paciente pelo telefone (cria se não existir), consulta a agenda
 real e marca a consulta — tudo escopado pelo tenant.
 
+### Usando o Gemini (LLM real, opcional)
+
+Por padrão o agente usa um LLM **mock** (intenção por regex, offline). Para usar o
+**Google Gemini** de verdade, pegue uma chave grátis em
+https://aistudio.google.com e configure no `.env`:
+
+```
+LLM_PROVIDER=gemini
+GEMINI_API_KEY=<sua-chave>
+GEMINI_MODEL=gemini-2.5-flash
+```
+
+Sem chave (ou com `LLM_PROVIDER=mock`), o agente segue no mock — útil para
+desenvolvimento e testes offline. A execução das tools (`buscar_horarios`/
+`agendar`) continua escopada por tenant (RLS) nos dois casos.
+
 ---
 
 ## Testes
@@ -214,7 +230,7 @@ Hoje rodam mocks; a troca por provedores reais não toca a regra de negócio:
 
 | Interface | Mock atual | Provedor futuro |
 |-----------|------------|-----------------|
-| `ai_agent/llm/base.LLMProvider` | `MockLLMProvider` (intenção por regex) | Claude / OpenAI |
+| `ai_agent/llm/base.LLMProvider` | `MockLLMProvider` (regex) **ou Gemini (real)** | Claude / OpenAI |
 | `ai_agent/channels/base.WhatsAppChannel` | `MockWhatsAppChannel` | Meta (Graph API) |
 | `billing/gateway.PaymentGateway` | `MockPaymentGateway` | Mercado Pago / Asaas |
 | `scheduling/calendar_sync.CalendarSync` | `NullCalendarSync` | Google Calendar |
