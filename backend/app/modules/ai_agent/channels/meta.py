@@ -27,6 +27,8 @@ class ParsedMessage:
 
 
 class MetaWhatsAppChannel(WhatsAppChannel):
+    channel_name = "whatsapp"
+
     def __init__(
         self, token: str, phone_number_id: str, api_version: str = "v21.0"
     ) -> None:

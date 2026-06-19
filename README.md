@@ -19,7 +19,7 @@ PostgreSQL.
 | **Clínicas** | ✅ | Leitura/edição da própria clínica (tenant) |
 | **Pacientes** | ✅ | CRUD escopado por tenant |
 | **Agenda** | ✅ | Disponibilidade, agendar (com checagem de conflito), cancelar |
-| **Cobranças** | ✅ | Pix via gateway (mock) + webhook de confirmação |
+| **Cobranças** | ✅ | Pix via gateway mock **ou Mercado Pago (real)** + webhook de confirmação |
 | **Agente de IA** | ✅ | Conversa → consulta horários → agenda. LLM mock ou **Gemini**; canal mock ou **WhatsApp (Meta)** |
 | **Painel web** | ✅ | Login, Pacientes, Agenda (calendário), Cobranças |
 | **Multi-tenancy** | ✅ | Shared DB + `clinic_id` + RLS (isolamento garantido pelo banco) |
@@ -158,7 +158,8 @@ Abra http://localhost:5173 e entre com o login de teste. Telas: **Agenda**
 | `POST` | `/scheduling/appointments/{id}/cancel` | Cancelar |
 | `GET` `POST` | `/billing/charges` | Listar / criar cobrança Pix |
 | `POST` | `/billing/charges/{id}/refresh` | Atualizar status no gateway |
-| `POST` | `/billing/webhook` | Confirmação do provedor (sem JWT) |
+| `POST` | `/billing/webhook` | Confirmação genérica/mock (sem JWT) |
+| `POST` | `/billing/mercadopago/webhook` | Notificação do Mercado Pago (sem JWT) |
 | `POST` | `/ai/webhook` | Mensagem recebida pelo canal mock (teste do agente) |
 | `GET` `POST` | `/ai/whatsapp/webhook` | Verificação / recebimento do WhatsApp (Meta) |
 | `GET` `POST` | `/ai/whatsapp/numbers` | Listar / registrar o número da clínica |
@@ -225,6 +226,22 @@ O webhook resolve a clínica pelo `phone_number_id` (tabela `whatsapp_numbers` +
 função `SECURITY DEFINER`) e processa em background. Sem credenciais
 (`CHANNEL_PROVIDER=mock`), tudo segue no canal mock.
 
+### Ativar o Pix real (Mercado Pago, sandbox)
+
+> 📖 **Passo a passo detalhado:** [`docs/mercadopago-setup.md`](docs/mercadopago-setup.md)
+
+Pegue o **Access Token de teste** (`TEST-...`) no painel de devs do Mercado Pago e
+configure no `.env`:
+```
+BILLING_PROVIDER=mercadopago
+MERCADOPAGO_ACCESS_TOKEN=TEST-xxxx
+MERCADOPAGO_PAYER_EMAIL=test_user_123@testuser.com
+```
+`POST /billing/charges` passa a emitir um **Pix real** (QR copia-e-cola +
+imagem). Dá para testar **sem ngrok**: `POST /billing/charges/{id}/refresh`
+consulta o status na API do MP. Sem token (`BILLING_PROVIDER=mock`), segue no
+gateway mock.
+
 ---
 
 ## Testes
@@ -266,7 +283,7 @@ Hoje rodam mocks; a troca por provedores reais não toca a regra de negócio:
 |-----------|------------|-----------------|
 | `ai_agent/llm/base.LLMProvider` | `MockLLMProvider` (regex) **ou Gemini (real)** | Claude / OpenAI |
 | `ai_agent/channels/base.WhatsAppChannel` | `MockWhatsAppChannel` **ou Meta (real)** | (Twilio/360dialog) |
-| `billing/gateway.PaymentGateway` | `MockPaymentGateway` | Mercado Pago / Asaas |
+| `billing/gateway.PaymentGateway` | `MockPaymentGateway` **ou Mercado Pago (real)** | Asaas / Stripe |
 | `scheduling/calendar_sync.CalendarSync` | `NullCalendarSync` | Google Calendar |
 
 ---

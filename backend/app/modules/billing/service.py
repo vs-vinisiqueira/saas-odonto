@@ -14,19 +14,20 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.database import async_session_maker
 from app.core.tenant import open_tenant_session
 from app.modules.billing import repository
+from app.modules.billing.factory import get_payment_gateway
 from app.modules.billing.gateway import PaymentGateway
-from app.modules.billing.mock_gateway import default_gateway
 from app.modules.billing.models import PAYMENT_STATUSES, Payment
 from app.modules.billing.schemas import ChargeCreate
-from app.shared.exceptions import NotFound
+from app.shared.exceptions import Conflict, NotFound
 
 
 async def create_charge(
     session: AsyncSession,
     clinic_id: uuid.UUID | str,
     data: ChargeCreate,
-    gateway: PaymentGateway = default_gateway,
+    gateway: PaymentGateway | None = None,
 ) -> Payment:
+    gateway = gateway or get_payment_gateway()
     payment_id = uuid.uuid4()
     charge = await gateway.create_pix_charge(
         amount=data.valor,
@@ -67,12 +68,23 @@ async def refresh_status(
     session: AsyncSession,
     clinic_id: uuid.UUID | str,
     payment_id: uuid.UUID | str,
-    gateway: PaymentGateway = default_gateway,
+    gateway: PaymentGateway | None = None,
 ) -> Payment:
+    gateway = gateway or get_payment_gateway()
     payment = await get_payment(session, clinic_id, payment_id)
     payment.status = await gateway.get_status(payment.charge_id)
     await session.flush()
     return payment
+
+
+async def delete_charge(
+    session: AsyncSession, clinic_id: uuid.UUID | str, payment_id: uuid.UUID | str
+) -> None:
+    payment = await get_payment(session, clinic_id, payment_id)
+    if payment.status in ("paid", "approved"):
+        raise Conflict("Não é possível excluir uma cobrança já paga")
+    await session.delete(payment)
+    await session.flush()
 
 
 async def handle_webhook(charge_id: str, status: str) -> bool:
@@ -101,3 +113,13 @@ async def handle_webhook(charge_id: str, status: str) -> bool:
         payment.status = status
         await session.flush()
     return True
+
+
+async def handle_mercadopago_event(
+    payment_id: str, gateway: PaymentGateway | None = None
+) -> bool:
+    """Webhook do Mercado Pago: ele manda só o id do pagamento; consultamos o
+    status na API e atualizamos. O id do MP é o nosso `charge_id`."""
+    gateway = gateway or get_payment_gateway()
+    status = await gateway.get_status(payment_id)
+    return await handle_webhook(payment_id, status)

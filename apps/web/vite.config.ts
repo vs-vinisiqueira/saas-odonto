@@ -13,12 +13,18 @@ export default defineConfig({
   server: {
     port: 5173,
     proxy: {
-      // chamadas a /api/* vão para o backend FastAPI em dev
       "/api": {
         target: "http://localhost:8000",
         changeOrigin: true,
         rewrite: (path) => path.replace(/^\/api/, ""),
       },
+    },
+    // Security headers em dev (Mixeng: SNIP - Security Headers)
+    headers: {
+      "X-Content-Type-Options": "nosniff",
+      "X-Frame-Options": "DENY",
+      "Referrer-Policy": "strict-origin-when-cross-origin",
+      "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
     },
   },
   test: {

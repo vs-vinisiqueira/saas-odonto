@@ -1,17 +1,53 @@
-import { CalendarDays, CreditCard, LogOut, Users } from "lucide-react";
+import {
+  CalendarDays,
+  CreditCard,
+  LayoutDashboard,
+  LogOut,
+  MessagesSquare,
+  Moon,
+  Settings,
+  Sun,
+  Users,
+} from "lucide-react";
 import { NavLink, Outlet, useNavigate } from "react-router-dom";
 
-import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
 import { useMyClinic } from "@/features/clinic/api";
 import { useAuthStore } from "@/lib/auth-store";
+import { useThemeStore } from "@/lib/theme-store";
 import { cn } from "@/lib/utils";
 
 const NAV = [
+  { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { to: "/agenda", label: "Agenda", icon: CalendarDays },
+  { to: "/conversas", label: "Conversas", icon: MessagesSquare, badge: true },
   { to: "/pacientes", label: "Pacientes", icon: Users },
   { to: "/cobrancas", label: "Cobranças", icon: CreditCard },
 ];
+
+function initials(name: string) {
+  return name
+    .replace(/^Dra?\.?\s*/i, "")
+    .split(" ")
+    .slice(0, 2)
+    .map((w) => w[0])
+    .join("")
+    .toUpperCase();
+}
+
+function ThemeToggle() {
+  const theme = useThemeStore((s) => s.theme);
+  const toggle = useThemeStore((s) => s.toggle);
+  return (
+    <button
+      onClick={toggle}
+      title={theme === "dark" ? "Tema claro" : "Tema escuro"}
+      className="flex h-9 w-9 items-center justify-center rounded-[11px] border border-border bg-card text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
+    >
+      {theme === "dark" ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+    </button>
+  );
+}
 
 export function AppShell() {
   const navigate = useNavigate();
@@ -19,71 +55,163 @@ export function AppShell() {
   const user = useAuthStore((s) => s.user);
   const clinic = useMyClinic();
 
+  const unreadCount = 0; // TODO: track unread count via useConversations()
+
+  const clinicName = clinic.data?.nome ?? "SaaS Odonto";
+  const userName = user?.role === "owner" ? clinicName : (user?.role ?? "Usuário");
+  const userInitials = initials(userName);
+
   function handleLogout() {
     clear();
     navigate("/login", { replace: true });
   }
 
   return (
-    <div className="flex min-h-screen">
+    <div className="flex min-h-screen bg-background">
       {/* Sidebar */}
-      <aside className="hidden w-60 shrink-0 flex-col border-r bg-card px-3 py-5 md:flex">
-        <div className="mb-6 flex items-center gap-2 px-2">
-          <span className="text-xl">🦷</span>
-          <span className="font-semibold">SaaS Odonto</span>
+      <aside className="hidden w-[248px] shrink-0 flex-col border-r bg-card md:flex" style={{ padding: "18px 14px" }}>
+        {/* Logo + Clínica */}
+        <div className="flex items-center gap-3 pb-5 pl-1">
+          <div
+            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl"
+            style={{
+              background: "linear-gradient(145deg, #7C3AED, #0D9488)",
+              boxShadow: "0 4px 12px rgba(124,58,237,.28)",
+            }}
+          >
+            <div className="relative h-4 w-4">
+              <div className="absolute left-0 top-0 h-2.5 w-2.5 rounded-full bg-white opacity-90" />
+              <div className="absolute bottom-0 right-0 h-2.5 w-2.5 rounded-full bg-white opacity-55" />
+            </div>
+          </div>
+          <div className="leading-tight">
+            {clinic.isLoading ? (
+              <Spinner className="h-4 w-4 text-primary" />
+            ) : (
+              <span className="block text-[15px] font-extrabold tracking-tight text-foreground">
+                {clinicName}
+              </span>
+            )}
+            <span className="block text-[11.5px] font-medium text-muted-foreground">
+              Painel da clínica
+            </span>
+          </div>
         </div>
-        <nav className="flex flex-col gap-1">
-          {NAV.map(({ to, label, icon: Icon }) => (
+
+        {/* Label seção */}
+        <div className="mb-1.5 px-2 text-[11px] font-bold uppercase tracking-[.06em] text-muted-foreground">
+          Menu
+        </div>
+
+        {/* Navegação */}
+        <nav className="flex flex-col gap-0.5">
+          {NAV.map(({ to, label, icon: Icon, badge }) => (
             <NavLink
               key={to}
               to={to}
               className={({ isActive }) =>
                 cn(
-                  "flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors",
+                  "flex items-center gap-2.5 rounded-[10px] px-2.5 py-2 text-[14px] font-medium transition-all",
                   isActive
-                    ? "bg-accent text-accent-foreground"
+                    ? "font-bold text-[hsl(var(--nav-active-text))] [background:hsl(var(--nav-active-bg))] [box-shadow:inset_0_0_0_1px_hsl(var(--nav-active-ring))]"
                     : "text-muted-foreground hover:bg-secondary hover:text-foreground",
                 )
               }
             >
-              <Icon className="h-4 w-4" />
-              {label}
+              <Icon className="h-[18px] w-[18px] shrink-0" />
+              <span className="flex-1">{label}</span>
+              {badge && unreadCount > 0 && (
+                <span className="flex h-5 min-w-[20px] items-center justify-center rounded-full bg-primary px-1.5 text-[11.5px] font-bold text-primary-foreground">
+                  {unreadCount}
+                </span>
+              )}
             </NavLink>
           ))}
         </nav>
+
+        <div className="flex-1" />
+
+        {/* Configurações */}
+        <NavLink
+          to="/config"
+          className={({ isActive }) =>
+            cn(
+              "flex items-center gap-2.5 rounded-[10px] px-2.5 py-2 text-[14px] font-medium transition-all",
+              isActive
+                ? "font-bold text-[hsl(var(--nav-active-text))] [background:hsl(var(--nav-active-bg))]"
+                : "text-muted-foreground hover:bg-secondary hover:text-foreground",
+            )
+          }
+        >
+          <Settings className="h-[18px] w-[18px] shrink-0" />
+          <span className="flex-1">Configurações</span>
+        </NavLink>
+
+        {/* Usuário */}
+        <div className="mt-2 flex items-center gap-2.5 border-t border-border-soft px-2 pt-3">
+          <div
+            className="flex h-[34px] w-[34px] shrink-0 items-center justify-center rounded-full text-[13px] font-bold text-white"
+            style={{ background: "linear-gradient(135deg, #7C3AED, #0D9488)" }}
+          >
+            {userInitials}
+          </div>
+          <div className="min-w-0 flex-1 leading-tight">
+            <span className="block truncate text-[13px] font-bold text-foreground">
+              {clinicName}
+            </span>
+            <span className="block text-[11.5px] capitalize text-muted-foreground">
+              {user?.role ?? ""}
+            </span>
+          </div>
+          <button
+            onClick={handleLogout}
+            title="Sair"
+            className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive"
+          >
+            <LogOut className="h-4 w-4" />
+          </button>
+        </div>
       </aside>
 
-      {/* Conteúdo */}
+      {/* Conteúdo principal */}
       <div className="flex min-w-0 flex-1 flex-col">
-        <header className="flex h-14 items-center justify-between border-b bg-card px-4 md:px-6">
-          <div className="flex items-center gap-2 text-sm">
-            {clinic.isLoading ? (
-              <Spinner />
-            ) : (
-              <span className="font-medium">{clinic.data?.nome ?? "—"}</span>
-            )}
-            {user?.role && (
-              <span className="rounded bg-secondary px-2 py-0.5 text-xs capitalize text-muted-foreground">
-                {user.role}
-              </span>
-            )}
-          </div>
-          <Button variant="ghost" size="sm" onClick={handleLogout}>
+        {/* Topbar */}
+        <header
+          className="flex h-[66px] shrink-0 items-center gap-4 border-b px-7"
+          style={{ background: "var(--glass)", backdropFilter: "blur(10px)", zIndex: 5 }}
+        >
+          <h1 className="text-[19px] font-extrabold tracking-tight text-foreground">
+            {/* título dinâmico via outlet — mantemos a clínica no topo */}
+            {clinicName}
+          </h1>
+          <div className="flex-1" />
+          <ThemeToggle />
+          <button
+            onClick={handleLogout}
+            className="hidden items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-secondary hover:text-destructive md:flex"
+          >
             <LogOut className="h-4 w-4" />
             Sair
-          </Button>
+          </button>
+          {/* Avatar topbar */}
+          <div
+            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-[13px] font-bold text-white"
+            style={{ background: "linear-gradient(135deg, #7C3AED, #0D9488)" }}
+          >
+            {userInitials}
+          </div>
         </header>
 
         {/* Nav mobile */}
-        <nav className="flex gap-1 border-b bg-card px-2 py-2 md:hidden">
+        <nav className="flex gap-1 overflow-x-auto border-b bg-card px-2 py-2 md:hidden">
           {NAV.map(({ to, label, icon: Icon }) => (
             <NavLink
               key={to}
               to={to}
               className={({ isActive }) =>
                 cn(
-                  "flex flex-1 flex-col items-center gap-0.5 rounded-md px-2 py-1 text-xs",
-                  isActive ? "text-primary" : "text-muted-foreground",
+                  "flex flex-1 shrink-0 flex-col items-center gap-0.5 rounded-md px-2 py-1.5 text-[11px]",
+                  isActive ? "text-primary font-semibold" : "text-muted-foreground",
                 )
               }
             >
@@ -93,7 +221,7 @@ export function AppShell() {
           ))}
         </nav>
 
-        <main className="flex-1 bg-background p-4 md:p-6">
+        <main className="flex-1 overflow-auto bg-background p-5 md:p-7">
           <Outlet />
         </main>
       </div>

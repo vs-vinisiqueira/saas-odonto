@@ -19,9 +19,20 @@ from app.modules.scheduling.schemas import (
     AppointmentOut,
     AppointmentUpdate,
     SlotOut,
+    StatsOut,
 )
 
 router = APIRouter(prefix="/scheduling", tags=["scheduling"])
+
+
+@router.get("/stats", response_model=StatsOut)
+async def stats(
+    from_: dt.date = Query(..., alias="from", description="Início do intervalo (YYYY-MM-DD)"),
+    to: dt.date = Query(..., description="Fim do intervalo, inclusivo (YYYY-MM-DD)"),
+    user: CurrentUser = Depends(get_current_user),
+    session: AsyncSession = Depends(get_tenant_session),
+):
+    return await service.stats(session, user.clinic_id, from_, to)
 
 
 @router.get("/availability", response_model=list[SlotOut])
@@ -77,6 +88,15 @@ async def update_appointment(
     return await service.update_appointment(
         session, user.clinic_id, appointment_id, body
     )
+
+
+@router.delete("/appointments/{appointment_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_appointment(
+    appointment_id: uuid.UUID,
+    user: CurrentUser = Depends(get_current_user),
+    session: AsyncSession = Depends(get_tenant_session),
+):
+    await service.delete_appointment(session, user.clinic_id, appointment_id)
 
 
 @router.post("/appointments/{appointment_id}/cancel", response_model=AppointmentOut)

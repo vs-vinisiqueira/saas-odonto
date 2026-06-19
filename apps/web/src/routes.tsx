@@ -11,8 +11,11 @@ import { ProtectedRoute } from "@/components/layout/protected-route";
 import { FullPageSpinner } from "@/components/ui/spinner";
 import { AgendaPage } from "@/features/scheduling/agenda-page";
 import { BillingPage } from "@/features/billing/billing-page";
+import { ConversationsPage } from "@/features/conversations/conversations-page";
+import { DashboardPage } from "@/features/dashboard/dashboard-page";
 import { LoginPage } from "@/features/auth/login-page";
 import { PatientsPage } from "@/features/patients/patients-page";
+import { ConfigPage } from "@/features/config/config-page";
 import { bootstrapAuth } from "@/lib/api";
 import { useAuthStore } from "@/lib/auth-store";
 
@@ -41,15 +44,18 @@ const router = createBrowserRouter([
           {
             element: <AppShell />,
             children: [
-              { index: true, element: <Navigate to="/agenda" replace /> },
+              { index: true, element: <Navigate to="/dashboard" replace /> },
+              { path: "dashboard", element: <DashboardPage /> },
               { path: "agenda", element: <AgendaPage /> },
+              { path: "conversas", element: <ConversationsPage /> },
               { path: "pacientes", element: <PatientsPage /> },
               { path: "cobrancas", element: <BillingPage /> },
+              { path: "config", element: <ConfigPage /> },
             ],
           },
         ],
       },
-      { path: "*", element: <Navigate to="/agenda" replace /> },
+      { path: "*", element: <Navigate to="/dashboard" replace /> },
     ],
   },
 ]);

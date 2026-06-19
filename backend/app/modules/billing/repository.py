@@ -37,7 +37,29 @@ async def get_by_charge_id(
     return result.scalar_one_or_none()
 
 
+async def list_by_patient(
+    session: AsyncSession, clinic_id: uuid.UUID | str, patient_id: uuid.UUID | str
+) -> list[Payment]:
+    result = await session.execute(
+        select(Payment)
+        .where(Payment.clinic_id == clinic_id, Payment.patient_id == patient_id)
+        .order_by(Payment.created_at.desc())
+    )
+    return list(result.scalars().all())
+
+
 async def add(session: AsyncSession, payment: Payment) -> Payment:
     session.add(payment)
     await session.flush()
     return payment
+
+
+async def delete_by_id(
+    session: AsyncSession, clinic_id: uuid.UUID | str, payment_id: uuid.UUID | str
+) -> bool:
+    payment = await get_by_id(session, clinic_id, payment_id)
+    if payment is None:
+        return False
+    await session.delete(payment)
+    await session.flush()
+    return True

@@ -72,6 +72,28 @@ async def find_conflict(
     return result.scalar_one_or_none()
 
 
+async def list_by_patient(
+    session: AsyncSession, clinic_id: uuid.UUID | str, patient_id: uuid.UUID | str
+) -> list[Appointment]:
+    result = await session.execute(
+        select(Appointment)
+        .where(Appointment.clinic_id == clinic_id, Appointment.patient_id == patient_id)
+        .order_by(Appointment.starts_at.desc())
+    )
+    return list(result.scalars().all())
+
+
+async def delete_by_id(
+    session: AsyncSession, clinic_id: uuid.UUID | str, appointment_id: uuid.UUID | str
+) -> bool:
+    appt = await get_by_id(session, clinic_id, appointment_id)
+    if appt is None:
+        return False
+    await session.delete(appt)
+    await session.flush()
+    return True
+
+
 async def add(session: AsyncSession, appointment: Appointment) -> Appointment:
     session.add(appointment)
     await session.flush()

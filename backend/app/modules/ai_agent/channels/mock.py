@@ -13,6 +13,8 @@ logger = logging.getLogger("ai_agent.channel.mock")
 
 
 class MockWhatsAppChannel(WhatsAppChannel):
+    channel_name = "mock"
+
     def __init__(self) -> None:
         self.sent: list[tuple[str, str]] = []
 

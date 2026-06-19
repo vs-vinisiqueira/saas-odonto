@@ -62,3 +62,13 @@ export function useCancelAppointment() {
     onSuccess: () => invalidateAgenda(qc),
   });
 }
+
+export function useDeleteAppointment() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: string) => {
+      await api.delete(`/scheduling/appointments/${id}`);
+    },
+    onSuccess: () => invalidateAgenda(qc),
+  });
+}

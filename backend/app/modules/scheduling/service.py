@@ -14,7 +14,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.modules.auth.models import User
 from app.modules.patients import repository as patients_repo
 from app.modules.scheduling import repository
-from app.modules.scheduling.calendar_sync import CalendarSync, default_calendar_sync
+from app.modules.scheduling.calendar_sync import CalendarSync
+from app.modules.scheduling.calendar_factory import get_calendar_sync
+
+default_calendar_sync = get_calendar_sync()
 from app.modules.scheduling.models import (
     APPOINTMENT_STATUSES,
     STATUS_CANCELLED,
@@ -139,6 +142,25 @@ async def list_appointments(
     return await repository.list_in_range(session, clinic_id, start, end, dentist_id)
 
 
+async def stats(
+    session: AsyncSession,
+    clinic_id: uuid.UUID | str,
+    start_date: dt.date,
+    end_date: dt.date,
+) -> dict:
+    """Contagem de agendamentos por status num intervalo [start_date, end_date]."""
+    start = dt.datetime.combine(start_date, dt.time.min, tzinfo=UTC)
+    end = dt.datetime.combine(end_date, dt.time.min, tzinfo=UTC) + dt.timedelta(days=1)
+    appts = await repository.list_in_range(session, clinic_id, start, end)
+    by_status: dict[str, int] = {}
+    per_day: dict[str, int] = {}
+    for a in appts:
+        by_status[a.status] = by_status.get(a.status, 0) + 1
+        day = a.starts_at.astimezone(UTC).date().isoformat()
+        per_day[day] = per_day.get(day, 0) + 1
+    return {"total": len(appts), "by_status": by_status, "per_day": per_day}
+
+
 async def get_appointment(
     session: AsyncSession, clinic_id: uuid.UUID | str, appointment_id: uuid.UUID | str
 ) -> Appointment:
@@ -203,3 +225,15 @@ async def cancel_appointment(
     await session.flush()
     await calendar.delete_event(appt)
     return appt
+
+
+async def delete_appointment(
+    session: AsyncSession,
+    clinic_id: uuid.UUID | str,
+    appointment_id: uuid.UUID | str,
+    calendar: CalendarSync = default_calendar_sync,
+) -> None:
+    appt = await get_appointment(session, clinic_id, appointment_id)
+    await calendar.delete_event(appt)
+    await session.delete(appt)
+    await session.flush()

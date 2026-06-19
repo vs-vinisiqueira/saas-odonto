@@ -1,3 +1,5 @@
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -5,11 +7,11 @@
 /* Tema CLARO. Marca roxa #7C3AED (violet-600). Tokens no estilo shadcn/ui. */
 @layer base {
   :root {
-    --background: 0 0% 100%;
-    --foreground: 240 10% 12%;
+    --background: 0 0% 98%;
+    --foreground: 240 10% 11%;
 
     --card: 0 0% 100%;
-    --card-foreground: 240 10% 12%;
+    --card-foreground: 240 10% 11%;
 
     --primary: 262 83% 58%; /* #7C3AED */
     --primary-foreground: 0 0% 100%;
@@ -26,22 +28,136 @@
     --destructive: 0 72% 51%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 240 6% 90%;
+    --success: 142 72% 29%;
+    --success-bg: 142 76% 97%;
+    --warning: 32 95% 44%;
+    --warning-bg: 48 100% 96%;
+    --teal: 174 72% 32%; /* #0D9488 */
+    --teal-bg: 174 72% 95%;
+
+    --border: 240 6% 92%;
+    --border-soft: 240 6% 95%;
     --input: 240 6% 90%;
     --ring: 262 83% 58%;
 
-    --radius: 0.6rem;
+    --radius: 0.75rem;
+
+    /* tokens do protótipo */
+    --nav-active-bg: 262 100% 97%;
+    --nav-active-text: 262 83% 45%;
+    --nav-active-ring: 262 100% 93%;
+    --surface-accent: linear-gradient(160deg, #FAF5FF, #fff 60%);
+    --border-accent: #E9D5FF;
+    --bubble-ia-bg: #F5F3FF;
+    --bubble-ia-text: #4C1D95;
+    --bubble-ia-border: #E9D5FF;
+    --glass: rgba(255,255,255,.85);
+  }
+
+  /* Tema ESCURO. */
+  .dark {
+    --background: 240 10% 8%;
+    --foreground: 0 0% 96%;
+
+    --card: 240 8% 11%;
+    --card-foreground: 0 0% 96%;
+
+    --primary: 262 83% 66%;
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 240 6% 18%;
+    --secondary-foreground: 0 0% 92%;
+
+    --muted: 240 6% 16%;
+    --muted-foreground: 240 5% 64%;
+
+    --accent: 262 40% 24%;
+    --accent-foreground: 262 90% 88%;
+
+    --destructive: 0 72% 56%;
+    --destructive-foreground: 0 0% 100%;
+
+    --success: 142 72% 40%;
+    --success-bg: 142 30% 14%;
+    --warning: 32 95% 55%;
+    --warning-bg: 32 40% 14%;
+    --teal: 174 72% 45%;
+    --teal-bg: 174 30% 14%;
+
+    --border: 240 6% 22%;
+    --border-soft: 240 6% 17%;
+    --input: 240 6% 22%;
+    --ring: 262 83% 66%;
+
+    --nav-active-bg: 262 83% 20%;
+    --nav-active-text: 262 90% 82%;
+    --nav-active-ring: 262 83% 30%;
+    --surface-accent: linear-gradient(160deg, rgba(124,58,237,.16), hsl(240 8% 11%) 62%);
+    --border-accent: rgba(124,58,237,.34);
+    --bubble-ia-bg: rgba(124,58,237,.17);
+    --bubble-ia-text: #D9CBF7;
+    --bubble-ia-border: rgba(124,58,237,.34);
+    --glass: rgba(20,21,26,.82);
   }
 
   * {
     border-color: hsl(var(--border));
+    box-sizing: border-box;
   }
 
   body {
     margin: 0;
     background-color: hsl(var(--background));
     color: hsl(var(--foreground));
-    font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    font-family: 'Plus Jakarta Sans', ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
     -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+
+  ::selection {
+    background: #DDD6FE;
+    color: #4C1D95;
   }
 }
+
+@layer utilities {
+  .animate-fade-up {
+    animation: fadeUp 0.45s cubic-bezier(0.16, 1, 0.3, 1) both;
+  }
+  .animate-grow-bar {
+    animation: growBar 0.8s cubic-bezier(0.16, 1, 0.3, 1) both;
+    transform-origin: bottom;
+  }
+  .animate-bubble-in {
+    animation: bubbleIn 0.35s cubic-bezier(0.16, 1, 0.3, 1) both;
+  }
+  .animate-pop {
+    animation: pop 0.4s cubic-bezier(0.16, 1, 0.3, 1) both;
+  }
+}
+
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(14px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes growBar {
+  from { transform: scaleY(0); }
+  to { transform: scaleY(1); }
+}
+@keyframes bubbleIn {
+  from { opacity: 0; transform: translateY(8px) scale(0.97); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+@keyframes pop {
+  0% { opacity: 0; transform: scale(0.94); }
+  60% { transform: scale(1.01); }
+  100% { opacity: 1; transform: scale(1); }
+}
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* Scrollbar customizada */
+*::-webkit-scrollbar { width: 8px; height: 8px; }
+*::-webkit-scrollbar-thumb { background: hsl(var(--border)); border-radius: 8px; border: 2px solid transparent; background-clip: content-box; }
+*::-webkit-scrollbar-thumb:hover { background: hsl(var(--muted-foreground) / 0.4); background-clip: content-box; }

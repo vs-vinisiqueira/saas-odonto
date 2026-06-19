@@ -11,6 +11,7 @@ from app.core.tenant import open_tenant_session
 from app.modules.ai_agent import tools
 from app.modules.ai_agent.channels.base import InboundMessage, WhatsAppChannel
 from app.modules.ai_agent.llm.base import LLMProvider
+from app.modules.conversations import service as conversations_service
 from app.modules.patients import repository as patients_repo
 from app.modules.patients.models import Patient
 
@@ -75,6 +76,19 @@ class AgentService:
                         {"role": "tool", "name": call.name, "content": result}
                     )
                     reply = result  # fallback caso o LLM não gere texto final
+
+            # Persiste a troca (mensagem do paciente + resposta da IA) para o
+            # painel poder mostrar o que o agente está falando com cada paciente.
+            channel_name = getattr(self._channel, "channel_name", "whatsapp")
+            await conversations_service.record_exchange(
+                session,
+                inbound.tenant_id,
+                inbound.from_number,
+                channel_name,
+                inbound.text,
+                reply,
+                patient_id=patient.id,
+            )
 
         await self._channel.send_text(inbound.from_number, reply)
         return reply

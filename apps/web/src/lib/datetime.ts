@@ -39,6 +39,27 @@ export function todayStr(): string {
   return toDateStr(new Date());
 }
 
+/** Hora local "HH:mm" de um ISO (mensagens usam o relógio real, não UTC). */
+export function formatClock(iso: string): string {
+  const d = new Date(iso);
+  return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
+}
+
+/** Rótulo curto e relativo: "agora", "14:32", "ontem" ou "5 jun". */
+export function formatRelative(iso: string | null): string {
+  if (!iso) return "";
+  const d = new Date(iso);
+  const now = new Date();
+  const diffMin = Math.floor((now.getTime() - d.getTime()) / 60000);
+  if (diffMin < 1) return "agora";
+  const sameDay = d.toDateString() === now.toDateString();
+  if (sameDay) return formatClock(iso);
+  const yesterday = new Date(now);
+  yesterday.setDate(now.getDate() - 1);
+  if (d.toDateString() === yesterday.toDateString()) return "ontem";
+  return `${d.getDate()} ${MONTHS[d.getMonth()]}`;
+}
+
 /** Soma `days` a um date string e devolve outro date string. */
 export function addDaysStr(dateStr: string, days: number): string {
   const [y, mo, da] = dateStr.split("-").map(Number);

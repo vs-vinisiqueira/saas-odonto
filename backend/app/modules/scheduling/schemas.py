@@ -35,3 +35,12 @@ class AppointmentOut(BaseModel):
 class SlotOut(BaseModel):
     starts_at: dt.datetime
     ends_at: dt.datetime
+
+
+class StatsOut(BaseModel):
+    """Resumo da agenda num intervalo, para o dashboard."""
+
+    total: int
+    by_status: dict[str, int]
+    # Contagem por dia (YYYY-MM-DD em UTC) — alimenta o gráfico semanal.
+    per_day: dict[str, int]

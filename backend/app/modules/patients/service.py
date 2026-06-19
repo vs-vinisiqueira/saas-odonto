@@ -2,9 +2,11 @@ import uuid
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.modules.billing import repository as billing_repo
 from app.modules.patients import repository
 from app.modules.patients.models import Patient
-from app.modules.patients.schemas import PatientCreate, PatientUpdate
+from app.modules.patients.schemas import PatientCreate, PatientRecordOut, PatientUpdate
+from app.modules.scheduling import repository as scheduling_repo
 from app.shared.exceptions import NotFound
 
 
@@ -54,3 +56,12 @@ async def delete_patient(
 ) -> None:
     patient = await get_patient(session, clinic_id, patient_id)
     await repository.delete(session, patient)
+
+
+async def get_patient_record(
+    session: AsyncSession, clinic_id: uuid.UUID | str, patient_id: uuid.UUID | str
+) -> PatientRecordOut:
+    patient = await get_patient(session, clinic_id, patient_id)
+    appointments = await scheduling_repo.list_by_patient(session, clinic_id, patient_id)
+    charges = await billing_repo.list_by_patient(session, clinic_id, patient_id)
+    return PatientRecordOut(patient=patient, appointments=appointments, charges=charges)
