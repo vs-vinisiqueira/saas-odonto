@@ -1,0 +1,89 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  # ── Backend: migrations + testes de integração ─────────────────────────────
+  backend:
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_DB: saas_odonto_test
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    env:
+      DATABASE_URL: postgresql+asyncpg://postgres:postgres@localhost:5432/saas_odonto_test
+      ADMIN_DATABASE_URL: postgresql+asyncpg://postgres:postgres@localhost:5432/saas_odonto_test
+      JWT_SECRET: ci-test-secret-not-used-in-production-32x
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: astral-sh/setup-uv@v5
+        with:
+          working-directory: backend
+
+      - name: Instalar dependências
+        working-directory: backend
+        run: uv sync
+
+      - name: Criar role app_user no banco de teste
+        run: |
+          PGPASSWORD=postgres psql -h localhost -U postgres -d saas_odonto_test \
+            -c "DO \$\$ BEGIN IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = 'app_user') THEN CREATE ROLE app_user LOGIN PASSWORD 'app_password'; END IF; END \$\$;"
+          PGPASSWORD=postgres psql -h localhost -U postgres -d saas_odonto_test \
+            -c "GRANT USAGE ON SCHEMA public TO app_user;"
+          PGPASSWORD=postgres psql -h localhost -U postgres -d saas_odonto_test \
+            -c "ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO app_user;"
+          PGPASSWORD=postgres psql -h localhost -U postgres -d saas_odonto_test \
+            -c "ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT USAGE, SELECT ON SEQUENCES TO app_user;"
+
+      - name: Aplicar migrations
+        working-directory: backend
+        run: uv run alembic upgrade head
+
+      - name: Rodar testes
+        working-directory: backend
+        run: uv run pytest app/tests/ -v --tb=short
+
+  # ── Frontend: type-check + build ───────────────────────────────────────────
+  frontend:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: apps/web/package-lock.json
+
+      - name: Instalar dependências
+        working-directory: apps/web
+        run: npm ci
+
+      - name: Type check
+        working-directory: apps/web
+        run: npx tsc -b --noEmit
+
+      - name: Build
+        working-directory: apps/web
+        run: npm run build
+        env:
+          VITE_API_URL: https://placeholder-substituir-no-vercel.up.railway.app
