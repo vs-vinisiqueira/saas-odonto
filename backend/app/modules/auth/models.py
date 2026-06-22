@@ -30,3 +30,6 @@ class User(UUIDPKMixin, TimestampMixin, Base):
     password_hash: Mapped[str] = mapped_column(String(255), nullable=False)
     role: Mapped[str] = mapped_column(String(32), nullable=False)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True, server_default="true")
+    # Perfil (preenchido pela tela de Configurações > Usuários).
+    nome: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    telefone: Mapped[str | None] = mapped_column(String(32), nullable=True)
