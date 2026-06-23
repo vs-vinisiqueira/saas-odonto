@@ -116,7 +116,7 @@ export function AgendaPage() {
         </div>
 
         <button
-          onClick={() => setDialogOpen(true)}
+          onClick={() => { setSlot(null); setDialogOpen(true); }}
           className="inline-flex items-center gap-1.5 rounded-[11px] bg-primary px-[15px] py-[10px] text-[13.5px] font-bold text-white shadow-[0_4px_14px_rgba(124,58,237,.28)] transition-all hover:-translate-y-px hover:shadow-[0_8px_22px_rgba(124,58,237,.36)]"
         >
           <Plus className="h-4 w-4" />
@@ -177,7 +177,7 @@ export function AgendaPage() {
         />
       )}
 
-      <BookingDialog open={dialogOpen} onOpenChange={setDialogOpen} slot={slot} />
+      <BookingDialog open={dialogOpen} onOpenChange={setDialogOpen} slot={slot} defaultDate={date} />
     </div>
   );
 }
