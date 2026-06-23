@@ -26,15 +26,18 @@ async def get_user(
 async def create_user(
     session: AsyncSession, clinic_id: uuid.UUID | str, data: UserCreate
 ) -> User:
+    # E-mail normalizado (minúsculo, sem espaços) para casar com o login, que é
+    # case-insensitive, e garantir a unicidade global de forma consistente.
+    email = data.email.strip().lower()
     # E-mail é único GLOBALMENTE. O RLS impediria de "ver" um e-mail de outra
     # clínica, então checamos via a função SECURITY DEFINER (ignora RLS) para
     # dar um 409 claro em vez de estourar a constraint do banco.
-    if await find_user_for_auth(session, data.email):
+    if await find_user_for_auth(session, email):
         raise Conflict("Já existe um usuário com esse e-mail")
 
     user = User(
         clinic_id=clinic_id,
-        email=data.email,
+        email=email,
         password_hash=hash_password(data.password),
         role=data.role,
         nome=data.nome,

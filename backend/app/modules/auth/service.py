@@ -20,7 +20,9 @@ def _issue_tokens(user_id, clinic_id, role) -> dict:
 
 
 async def authenticate(session: AsyncSession, email: str, password: str) -> dict:
-    user = await find_user_for_auth(session, email)
+    # E-mail é case-insensitive: normalizamos para casar com o que foi gravado
+    # (evita falha de login por maiúscula automática do teclado, p.ex. no mobile).
+    user = await find_user_for_auth(session, email.strip().lower())
     if (
         user is None
         or not user["is_active"]
