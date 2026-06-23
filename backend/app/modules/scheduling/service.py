@@ -6,6 +6,7 @@ tools. Toda escrita também é empurrada para o calendário externo via o port
 """
 
 import datetime as dt
+import logging
 import uuid
 
 from sqlalchemy import select
@@ -33,6 +34,26 @@ WORK_END_HOUR = 18
 DEFAULT_SLOT_MIN = 30
 
 UTC = dt.timezone.utc
+
+logger = logging.getLogger("scheduling.service")
+
+
+async def _calendar_for_clinic(
+    session: AsyncSession, clinic_id: uuid.UUID | str
+) -> CalendarSync:
+    """Calendário com as credenciais DA CLÍNICA quando configuradas; senão o
+    padrão global (NullCalendarSync no-op)."""
+    try:
+        from app.modules.integrations import service as integrations_service
+
+        creds = await integrations_service.load_credentials(
+            session, clinic_id, "google_calendar"
+        )
+        if creds:
+            return get_calendar_sync(creds)
+    except Exception:
+        logger.exception("Falha ao carregar calendário da clínica; usando padrão")
+    return default_calendar_sync
 
 
 def _ensure_utc(value: dt.datetime) -> dt.datetime:
@@ -98,9 +119,10 @@ async def agendar(
     session: AsyncSession,
     clinic_id: uuid.UUID | str,
     data: AppointmentCreate,
-    calendar: CalendarSync = default_calendar_sync,
+    calendar: CalendarSync | None = None,
 ) -> Appointment:
     """Cria um agendamento, validando paciente, dentista e conflito de horário."""
+    calendar = calendar or await _calendar_for_clinic(session, clinic_id)
     starts_at = _ensure_utc(data.starts_at)
     ends_at = starts_at + dt.timedelta(minutes=data.duration_min)
 
@@ -175,8 +197,9 @@ async def update_appointment(
     clinic_id: uuid.UUID | str,
     appointment_id: uuid.UUID | str,
     data: AppointmentUpdate,
-    calendar: CalendarSync = default_calendar_sync,
+    calendar: CalendarSync | None = None,
 ) -> Appointment:
+    calendar = calendar or await _calendar_for_clinic(session, clinic_id)
     appt = await get_appointment(session, clinic_id, appointment_id)
 
     if data.status is not None:
@@ -218,8 +241,9 @@ async def cancel_appointment(
     session: AsyncSession,
     clinic_id: uuid.UUID | str,
     appointment_id: uuid.UUID | str,
-    calendar: CalendarSync = default_calendar_sync,
+    calendar: CalendarSync | None = None,
 ) -> Appointment:
+    calendar = calendar or await _calendar_for_clinic(session, clinic_id)
     appt = await get_appointment(session, clinic_id, appointment_id)
     appt.status = STATUS_CANCELLED
     await session.flush()
@@ -231,8 +255,9 @@ async def delete_appointment(
     session: AsyncSession,
     clinic_id: uuid.UUID | str,
     appointment_id: uuid.UUID | str,
-    calendar: CalendarSync = default_calendar_sync,
+    calendar: CalendarSync | None = None,
 ) -> None:
+    calendar = calendar or await _calendar_for_clinic(session, clinic_id)
     appt = await get_appointment(session, clinic_id, appointment_id)
     await calendar.delete_event(appt)
     await session.delete(appt)

@@ -10,6 +10,7 @@ from app.modules.auth.router import router as auth_router
 from app.modules.billing.router import router as billing_router
 from app.modules.clinics.router import router as clinics_router
 from app.modules.conversations.router import router as conversations_router
+from app.modules.integrations.router import router as integrations_router
 from app.modules.patients.router import router as patients_router
 from app.modules.scheduling.router import router as scheduling_router
 from app.modules.users.router import router as users_router
@@ -74,6 +75,7 @@ async def health():
 app.include_router(auth_router)
 app.include_router(clinics_router)
 app.include_router(users_router)
+app.include_router(integrations_router)
 app.include_router(patients_router)
 app.include_router(scheduling_router)
 app.include_router(billing_router)

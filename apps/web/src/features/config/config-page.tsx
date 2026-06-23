@@ -2,6 +2,7 @@ import { Bell, Building2, Clock, Plug, Users } from "lucide-react";
 import { useState } from "react";
 
 import { useAuthStore } from "@/lib/auth-store";
+import { IntegrationsSection } from "@/features/integrations/integrations-section";
 import { UsersSection } from "@/features/users/users-section";
 
 type SectionId = "users" | "clinic" | "hours" | "integrations" | "preferences";
@@ -10,7 +11,7 @@ const SECTIONS: { id: SectionId; label: string; icon: typeof Users; ready: boole
   { id: "users", label: "Usuários", icon: Users, ready: true },
   { id: "clinic", label: "Dados da clínica", icon: Building2, ready: false },
   { id: "hours", label: "Horários", icon: Clock, ready: false },
-  { id: "integrations", label: "Integrações", icon: Plug, ready: false },
+  { id: "integrations", label: "Integrações", icon: Plug, ready: true },
   { id: "preferences", label: "Preferências", icon: Bell, ready: false },
 ];
 
@@ -61,8 +62,8 @@ export function ConfigPage() {
 
         {/* Conteúdo da seção */}
         <div>
-          {active === "users" ? (
-            isOwner ? (
+          {active === "users" &&
+            (isOwner ? (
               <UsersSection />
             ) : (
               <Placeholder
@@ -70,8 +71,20 @@ export function ConfigPage() {
                 title="Apenas administradores"
                 text="A gestão de usuários é restrita a administradores da clínica."
               />
-            )
-          ) : (
+            ))}
+
+          {active === "integrations" &&
+            (isOwner ? (
+              <IntegrationsSection />
+            ) : (
+              <Placeholder
+                icon={Plug}
+                title="Apenas administradores"
+                text="As integrações da clínica são configuradas por administradores."
+              />
+            ))}
+
+          {active !== "users" && active !== "integrations" && (
             <Placeholder
               icon={SECTIONS.find((s) => s.id === active)!.icon}
               title={SECTIONS.find((s) => s.id === active)!.label}

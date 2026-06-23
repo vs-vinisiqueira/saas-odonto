@@ -29,6 +29,18 @@ def make_engine(url: str):
 
 
 @pytest.fixture(autouse=True)
+def _reset_rate_limit():
+    """O rate limiter de login é um contador in-memory por processo (5/min/IP).
+    Como toda a suíte loga do mesmo IP (127.0.0.1, ASGITransport), sem zerar entre
+    os testes o limite estoura e logins passam a dar 429. Reset garante isolamento."""
+    from app.core.ratelimit import _hits
+
+    _hits.clear()
+    yield
+    _hits.clear()
+
+
+@pytest.fixture(autouse=True)
 async def _dispose_app_engine():
     """Cada teste async roda em um event loop próprio. O engine global da app
     (app.core.database.engine) mantém um pool asyncpg preso ao primeiro loop;

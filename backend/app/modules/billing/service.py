@@ -6,6 +6,7 @@ função SECURITY DEFINER (que ignora o RLS, como o login faz) e então abrimos 
 sessão escopada nesse tenant para atualizar o pagamento sob RLS.
 """
 
+import logging
 import uuid
 
 from sqlalchemy import text
@@ -20,6 +21,25 @@ from app.modules.billing.models import PAYMENT_STATUSES, Payment
 from app.modules.billing.schemas import ChargeCreate
 from app.shared.exceptions import Conflict, NotFound
 
+logger = logging.getLogger("billing.service")
+
+
+async def _gateway_for_clinic(
+    session: AsyncSession, clinic_id: uuid.UUID | str
+) -> PaymentGateway:
+    """Gateway com as credenciais DA CLÍNICA quando configuradas; senão global/mock."""
+    try:
+        from app.modules.integrations import service as integrations_service
+
+        creds = await integrations_service.load_credentials(
+            session, clinic_id, "mercadopago"
+        )
+        if creds:
+            return get_payment_gateway(creds)
+    except Exception:
+        logger.exception("Falha ao carregar gateway da clínica; usando padrão")
+    return get_payment_gateway()
+
 
 async def create_charge(
     session: AsyncSession,
@@ -27,7 +47,7 @@ async def create_charge(
     data: ChargeCreate,
     gateway: PaymentGateway | None = None,
 ) -> Payment:
-    gateway = gateway or get_payment_gateway()
+    gateway = gateway or await _gateway_for_clinic(session, clinic_id)
     payment_id = uuid.uuid4()
     charge = await gateway.create_pix_charge(
         amount=data.valor,
@@ -70,7 +90,7 @@ async def refresh_status(
     payment_id: uuid.UUID | str,
     gateway: PaymentGateway | None = None,
 ) -> Payment:
-    gateway = gateway or get_payment_gateway()
+    gateway = gateway or await _gateway_for_clinic(session, clinic_id)
     payment = await get_payment(session, clinic_id, payment_id)
     payment.status = await gateway.get_status(payment.charge_id)
     await session.flush()

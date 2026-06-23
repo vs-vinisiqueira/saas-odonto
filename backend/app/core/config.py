@@ -25,6 +25,12 @@ class Settings(BaseSettings):
     access_token_expire_minutes: int = 30
     refresh_token_expire_days: int = 7
 
+    # Chave para cifrar segredos de integrações por clínica (tokens de API) no
+    # banco. Recomendado: aleatória, ≥ 32 chars, FIXA (se mudar, os segredos já
+    # gravados ficam ilegíveis e precisam ser reconfigurados). Se ausente, cai no
+    # JWT_SECRET — funciona, mas o ideal é uma secret dedicada. Ver core/crypto.py.
+    credentials_secret: str | None = None
+
     # CORS: lista separada por vírgula. Em produção, inclua só os domínios reais.
     allowed_origins: str = "http://localhost:5173"
 

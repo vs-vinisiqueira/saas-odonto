@@ -7,13 +7,19 @@ das interfaces `LLMProvider` e `WhatsAppChannel` — os concretos (mock hoje,
 Claude/Meta amanhã) entram por injeção.
 """
 
+import logging
+
 from app.core.tenant import open_tenant_session
 from app.modules.ai_agent import tools
 from app.modules.ai_agent.channels.base import InboundMessage, WhatsAppChannel
+from app.modules.ai_agent.channels.factory import get_whatsapp_channel
 from app.modules.ai_agent.llm.base import LLMProvider
+from app.modules.ai_agent.llm.factory import get_llm_provider
 from app.modules.conversations import service as conversations_service
 from app.modules.patients import repository as patients_repo
 from app.modules.patients.models import Patient
+
+logger = logging.getLogger("ai_agent.service")
 
 SYSTEM_PROMPT = (
     "Você é a recepcionista virtual de uma clínica odontológica. Seja cordial e "
@@ -40,9 +46,31 @@ class AgentService:
             await patients_repo.add(session, patient)
         return patient
 
+    async def _resolve_providers(
+        self, session, clinic_id: str
+    ) -> tuple[LLMProvider, WhatsAppChannel]:
+        """Usa as credenciais DA CLÍNICA (IA + WhatsApp) quando configuradas;
+        senão cai nos provedores injetados (mock nos testes, global em produção)."""
+        llm, channel = self._llm, self._channel
+        try:
+            from app.modules.integrations import service as integrations_service
+
+            ai_creds = await integrations_service.load_credentials(session, clinic_id, "ai")
+            if ai_creds:
+                llm = get_llm_provider(ai_creds)
+            wa_creds = await integrations_service.load_credentials(
+                session, clinic_id, "whatsapp"
+            )
+            if wa_creds:
+                channel = get_whatsapp_channel(wa_creds)
+        except Exception:
+            logger.exception("Falha ao carregar credenciais da clínica; usando padrão")
+        return llm, channel
+
     async def handle(self, inbound: InboundMessage) -> str:
         """Processa uma mensagem e devolve (e envia) a resposta em texto."""
         async with open_tenant_session(inbound.tenant_id) as session:
+            llm, channel = await self._resolve_providers(session, inbound.tenant_id)
             patient = await self._ensure_patient(
                 session, inbound.tenant_id, inbound.from_number
             )
@@ -51,7 +79,7 @@ class AgentService:
             reply = "Desculpe, não entendi. Pode reformular?"
 
             for _ in range(MAX_TOOL_ROUNDS):
-                resp = await self._llm.complete(
+                resp = await llm.complete(
                     SYSTEM_PROMPT, messages, tools.TOOL_SPECS
                 )
                 if not resp.tool_calls:
@@ -79,7 +107,7 @@ class AgentService:
 
             # Persiste a troca (mensagem do paciente + resposta da IA) para o
             # painel poder mostrar o que o agente está falando com cada paciente.
-            channel_name = getattr(self._channel, "channel_name", "whatsapp")
+            channel_name = getattr(channel, "channel_name", "whatsapp")
             await conversations_service.record_exchange(
                 session,
                 inbound.tenant_id,
@@ -90,5 +118,5 @@ class AgentService:
                 patient_id=patient.id,
             )
 
-        await self._channel.send_text(inbound.from_number, reply)
+        await channel.send_text(inbound.from_number, reply)
         return reply
