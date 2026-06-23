@@ -188,10 +188,11 @@ export function AppShell() {
           <ThemeToggle />
           <button
             onClick={handleLogout}
-            className="hidden items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-secondary hover:text-destructive md:flex"
+            title="Sair"
+            className="flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-secondary hover:text-destructive md:px-3"
           >
             <LogOut className="h-4 w-4" />
-            Sair
+            <span className="hidden md:inline">Sair</span>
           </button>
           {/* Avatar topbar */}
           <div
@@ -202,15 +203,15 @@ export function AppShell() {
           </div>
         </header>
 
-        {/* Nav mobile */}
+        {/* Nav mobile — inclui Configurações, que no desktop fica na barra lateral */}
         <nav className="flex gap-1 overflow-x-auto border-b bg-card px-2 py-2 md:hidden">
-          {NAV.map(({ to, label, icon: Icon }) => (
+          {[...NAV, { to: "/config", label: "Config", icon: Settings }].map(({ to, label, icon: Icon }) => (
             <NavLink
               key={to}
               to={to}
               className={({ isActive }) =>
                 cn(
-                  "flex flex-1 shrink-0 flex-col items-center gap-0.5 rounded-md px-2 py-1.5 text-[11px]",
+                  "flex min-w-0 flex-1 flex-col items-center gap-0.5 rounded-md px-1 py-1.5 text-[10.5px]",
                   isActive ? "text-primary font-semibold" : "text-muted-foreground",
                 )
               }
