@@ -16,3 +16,26 @@ export interface Patient {
   email: string | null;
   observacoes: string | null;
 }
+
+export interface RecordAppointment {
+  id: string;
+  starts_at: string;
+  ends_at: string;
+  status: string;
+  notes: string | null;
+}
+
+export interface RecordCharge {
+  id: string;
+  valor: string;
+  descricao: string | null;
+  status: string;
+  charge_id: string;
+  created_at: string;
+}
+
+export interface PatientRecord {
+  patient: Patient;
+  appointments: RecordAppointment[];
+  charges: RecordCharge[];
+}

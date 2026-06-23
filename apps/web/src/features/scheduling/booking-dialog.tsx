@@ -5,7 +5,9 @@ import { Dialog } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Spinner } from "@/components/ui/spinner";
+import { Textarea } from "@/components/ui/textarea";
 import { usePatients } from "@/features/patients/api";
+import { useDentists } from "@/features/users/api";
 import { errorMessage } from "@/lib/api";
 import { formatTimeUTC, todayStr } from "@/lib/datetime";
 import { cn } from "@/lib/utils";
@@ -19,18 +21,30 @@ interface Props {
   defaultDate?: string;
 }
 
+const selectClass = cn(
+  "h-10 w-full rounded-md border border-input bg-background px-3 text-sm",
+  "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+);
+
 export function BookingDialog({ open, onOpenChange, slot, defaultDate }: Props) {
   const patients = usePatients();
+  const dentistsQuery = useDentists();
   const create = useCreateAppointment();
   const [patientId, setPatientId] = useState("");
+  const [dentistId, setDentistId] = useState("");
+  const [notes, setNotes] = useState("");
   // Data/hora manuais (em UTC), usadas quando não há slot pré-selecionado.
   const [date, setDate] = useState("");
   const [time, setTime] = useState("");
   const [error, setError] = useState<string | null>(null);
 
+  const dentists = dentistsQuery.data ?? [];
+
   useEffect(() => {
     if (open) {
       setPatientId("");
+      setDentistId("");
+      setNotes("");
       setDate(defaultDate ?? todayStr());
       setTime("09:00");
       setError(null);
@@ -60,6 +74,8 @@ export function BookingDialog({ open, onOpenChange, slot, defaultDate }: Props) 
         patient_id: patientId,
         starts_at: startsAt,
         duration_min: 30,
+        dentist_id: dentistId || undefined,
+        notes: notes.trim() || undefined,
       });
       onOpenChange(false);
     } catch (err) {
@@ -108,10 +124,7 @@ export function BookingDialog({ open, onOpenChange, slot, defaultDate }: Props) 
             id="patient"
             value={patientId}
             onChange={(e) => setPatientId(e.target.value)}
-            className={cn(
-              "h-10 w-full rounded-md border border-input bg-background px-3 text-sm",
-              "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-            )}
+            className={selectClass}
           >
             <option value="">Selecione...</option>
             {patients.data?.map((p) => (
@@ -125,6 +138,34 @@ export function BookingDialog({ open, onOpenChange, slot, defaultDate }: Props) 
               Nenhum paciente cadastrado. Cadastre em "Pacientes" primeiro.
             </p>
           )}
+        </div>
+
+        <div className="flex flex-col gap-1.5">
+          <Label htmlFor="dentist">Dentista responsável (opcional)</Label>
+          <select
+            id="dentist"
+            value={dentistId}
+            onChange={(e) => setDentistId(e.target.value)}
+            className={selectClass}
+          >
+            <option value="">Sem dentista</option>
+            {dentists.map((d) => (
+              <option key={d.id} value={d.id}>
+                {d.nome ?? d.email}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        <div className="flex flex-col gap-1.5">
+          <Label htmlFor="notes">Observações (opcional)</Label>
+          <Textarea
+            id="notes"
+            rows={3}
+            value={notes}
+            onChange={(e) => setNotes(e.target.value)}
+            placeholder="Ex.: limpeza, retorno, queixa do paciente..."
+          />
         </div>
 
         {error && (

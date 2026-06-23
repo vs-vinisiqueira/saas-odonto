@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { api } from "@/lib/api";
 import type {
+  Dentist,
   User,
   UserCreateInput,
   UserEditInput,
@@ -13,6 +14,14 @@ export function useUsers() {
   return useQuery({
     queryKey: KEY,
     queryFn: async () => (await api.get<User[]>("/users")).data,
+  });
+}
+
+/** Lista de dentistas da clínica (acessível a qualquer usuário autenticado). */
+export function useDentists() {
+  return useQuery({
+    queryKey: ["dentists"],
+    queryFn: async () => (await api.get<Dentist[]>("/users/dentists")).data,
   });
 }
 

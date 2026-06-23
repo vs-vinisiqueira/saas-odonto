@@ -18,6 +18,21 @@ async def list_all(session: AsyncSession, clinic_id: uuid.UUID | str) -> list[Us
     return list(result.scalars().all())
 
 
+async def list_dentists(
+    session: AsyncSession, clinic_id: uuid.UUID | str
+) -> list[User]:
+    result = await session.execute(
+        select(User)
+        .where(
+            User.clinic_id == clinic_id,
+            User.role == "dentist",
+            User.is_active.is_(True),
+        )
+        .order_by(User.nome, User.email)
+    )
+    return list(result.scalars().all())
+
+
 async def get_by_id(
     session: AsyncSession, clinic_id: uuid.UUID | str, user_id: uuid.UUID | str
 ) -> User | None:

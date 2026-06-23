@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { api } from "@/lib/api";
-import type { Patient, PatientFormInput } from "./schemas";
+import type { Patient, PatientFormInput, PatientRecord } from "./schemas";
 
 const KEY = ["patients"] as const;
 
@@ -19,6 +19,16 @@ export function usePatients() {
   return useQuery({
     queryKey: KEY,
     queryFn: async () => (await api.get<Patient[]>("/patients")).data,
+  });
+}
+
+/** Prontuário: dados do paciente + histórico de consultas e cobranças. */
+export function usePatientRecord(id: string | undefined) {
+  return useQuery({
+    queryKey: ["patient-record", id],
+    enabled: Boolean(id),
+    queryFn: async () =>
+      (await api.get<PatientRecord>(`/patients/${id}/record`)).data,
   });
 }
 

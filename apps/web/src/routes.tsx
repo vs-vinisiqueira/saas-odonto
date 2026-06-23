@@ -15,6 +15,7 @@ import { ConversationsPage } from "@/features/conversations/conversations-page";
 import { DashboardPage } from "@/features/dashboard/dashboard-page";
 import { LoginPage } from "@/features/auth/login-page";
 import { PatientsPage } from "@/features/patients/patients-page";
+import { PatientRecordPage } from "@/features/patients/patient-record-page";
 import { ConfigPage } from "@/features/config/config-page";
 import { bootstrapAuth } from "@/lib/api";
 import { useAuthStore } from "@/lib/auth-store";
@@ -49,6 +50,7 @@ const router = createBrowserRouter([
               { path: "agenda", element: <AgendaPage /> },
               { path: "conversas", element: <ConversationsPage /> },
               { path: "pacientes", element: <PatientsPage /> },
+              { path: "pacientes/:id", element: <PatientRecordPage /> },
               { path: "cobrancas", element: <BillingPage /> },
               { path: "config", element: <ConfigPage /> },
             ],

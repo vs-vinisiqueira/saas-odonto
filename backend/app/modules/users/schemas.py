@@ -48,3 +48,13 @@ class UserOut(BaseModel):
     telefone: str | None
     is_active: bool
     created_at: dt.datetime
+
+
+class DentistOut(BaseModel):
+    """Versão enxuta para preencher seletor de dentista (qualquer usuário lê)."""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    id: uuid.UUID
+    nome: str | None
+    email: EmailStr

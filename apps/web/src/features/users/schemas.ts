@@ -20,6 +20,13 @@ export interface User {
   created_at: string;
 }
 
+/** Versão enxuta para o seletor de dentista (endpoint aberto a toda a clínica). */
+export interface Dentist {
+  id: string;
+  nome: string | null;
+  email: string;
+}
+
 export const userCreateSchema = z.object({
   nome: z.string().min(1, "Informe o nome"),
   email: z.string().email("E-mail inválido"),

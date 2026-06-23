@@ -1,5 +1,6 @@
-import { Pencil, Plus, Search, Trash2 } from "lucide-react";
+import { FileText, Pencil, Plus, Search, Trash2 } from "lucide-react";
 import { useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
 
 import { Spinner } from "@/components/ui/spinner";
 import { useDeletePatient, usePatients } from "./api";
@@ -16,6 +17,7 @@ function avatarInitials(name: string) {
 }
 
 export function PatientsPage() {
+  const navigate = useNavigate();
   const { data, isLoading, isError } = usePatients();
   const del = useDeletePatient();
   const [search, setSearch] = useState("");
@@ -110,6 +112,7 @@ export function PatientsPage() {
             key={p.id}
             p={p}
             delay={`${i * 0.04}s`}
+            onOpen={() => navigate(`/pacientes/${p.id}`)}
             onEdit={() => openEdit(p)}
             onDelete={() => handleDelete(p)}
           />
@@ -124,11 +127,13 @@ export function PatientsPage() {
 function PatientRow({
   p,
   delay,
+  onOpen,
   onEdit,
   onDelete,
 }: {
   p: Patient;
   delay: string;
+  onOpen: () => void;
   onEdit: () => void;
   onDelete: () => void;
 }) {
@@ -147,7 +152,13 @@ function PatientRow({
         >
           {abbr}
         </div>
-        <span className="truncate text-sm font-semibold text-foreground">{p.nome}</span>
+        <button
+          onClick={onOpen}
+          className="truncate text-left text-sm font-semibold text-foreground transition-colors hover:text-primary hover:underline"
+          title="Ver prontuário"
+        >
+          {p.nome}
+        </button>
       </div>
 
       {/* Telefone */}
@@ -158,6 +169,14 @@ function PatientRow({
 
       {/* Ações */}
       <div className="flex items-center justify-end gap-1">
+        <ActionBtn
+          onClick={onOpen}
+          hoverBg="#EFF6FF"
+          hoverColor="#1D4ED8"
+          title="Ver prontuário"
+        >
+          <FileText className="h-4 w-4" />
+        </ActionBtn>
         <ActionBtn
           onClick={onEdit}
           hoverBg="#F4F1FE"

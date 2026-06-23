@@ -21,6 +21,15 @@ export interface CreateAppointmentInput {
   patient_id: string;
   starts_at: string;
   duration_min?: number;
+  dentist_id?: string | null;
+  notes?: string | null;
+}
+
+/** Campos editáveis de um agendamento já existente (PATCH parcial). */
+export interface UpdateAppointmentInput {
+  status?: string;
+  dentist_id?: string;
+  notes?: string;
 }
 
 export function useAvailability(date: string) {
@@ -50,6 +59,15 @@ export function useCreateAppointment() {
   return useMutation({
     mutationFn: async (input: CreateAppointmentInput) =>
       (await api.post<Appointment>("/scheduling/appointments", input)).data,
+    onSuccess: () => invalidateAgenda(qc),
+  });
+}
+
+export function useUpdateAppointment() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id, data }: { id: string; data: UpdateAppointmentInput }) =>
+      (await api.patch<Appointment>(`/scheduling/appointments/${id}`, data)).data,
     onSuccess: () => invalidateAgenda(qc),
   });
 }

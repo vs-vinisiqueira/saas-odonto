@@ -14,8 +14,10 @@ import {
   useAvailability,
   useCancelAppointment,
   useDeleteAppointment,
+  type Appointment,
   type Slot,
 } from "./api";
+import { AppointmentDetailsPanel } from "./appointment-details-panel";
 import { BookingDialog } from "./booking-dialog";
 
 const PT_DAYS_SHORT = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
@@ -36,6 +38,8 @@ export function AgendaPage() {
   const [view, setView] = useState<AgendaView>("week");
   const [slot, setSlot] = useState<Slot | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [detailAppt, setDetailAppt] = useState<Appointment | null>(null);
+  const [detailOpen, setDetailOpen] = useState(false);
 
   const availability = useAvailability(date);
   const appointments = useAppointments(date);
@@ -58,6 +62,11 @@ export function AgendaPage() {
   function openSlot(s: Slot) {
     setSlot(s);
     setDialogOpen(true);
+  }
+
+  function openDetails(appt: Appointment) {
+    setDetailAppt(appt);
+    setDetailOpen(true);
   }
 
   const today = todayStr();
@@ -161,6 +170,7 @@ export function AgendaPage() {
           appointments={appointments.data ?? []}
           patientName={patientName}
           onSlotClick={(d) => { setDate(d); setView("day"); }}
+          onApptOpen={openDetails}
         />
       ) : (
         <DayGrid
@@ -169,6 +179,7 @@ export function AgendaPage() {
           patientName={patientName}
           loading={appointments.isLoading}
           onSlotClick={openSlot}
+          onApptOpen={openDetails}
           onCancel={(id) => cancel.mutate(id)}
           onDelete={(id, name) => {
             if (window.confirm(`Excluir definitivamente o agendamento de "${name}"? Esta ação não pode ser desfeita.`))
@@ -178,18 +189,24 @@ export function AgendaPage() {
       )}
 
       <BookingDialog open={dialogOpen} onOpenChange={setDialogOpen} slot={slot} defaultDate={date} />
+      <AppointmentDetailsPanel
+        open={detailOpen}
+        onOpenChange={setDetailOpen}
+        appointment={detailAppt}
+      />
     </div>
   );
 }
 
 // ─── Week Grid ──────────────────────────────────────────────────────────────
 function WeekGrid({
-  weekDays, today, appointments, patientName, onSlotClick,
+  weekDays, today, appointments, patientName, onSlotClick, onApptOpen,
 }: {
   weekDays: string[]; today: string;
   appointments: ReturnType<typeof useAppointments>["data"] extends (infer T)[] | undefined ? T[] : never[];
   patientName: (id: string) => string;
   onSlotClick: (d: string) => void;
+  onApptOpen: (a: Appointment) => void;
 }) {
   // map: day_index + hour -> appointment
   const grid = useMemo(() => {
@@ -260,7 +277,9 @@ function WeekGrid({
                       >
                         {appt && st && (
                           <div
-                            className="group h-full overflow-hidden rounded-lg p-1.5 transition-all hover:scale-[1.04] hover:shadow-[0_6px_16px_rgba(16,24,40,.16)]"
+                            onDoubleClick={() => onApptOpen(appt)}
+                            title="Duplo clique para ver detalhes"
+                            className="group h-full cursor-pointer overflow-hidden rounded-lg p-1.5 transition-all hover:scale-[1.04] hover:shadow-[0_6px_16px_rgba(16,24,40,.16)]"
                             style={{ background: st.bg, borderLeft: `3px solid ${st.border}` }}
                           >
                             <div className="truncate text-[9.5px] font-extrabold uppercase leading-none tracking-[.03em]" style={{ color: st.color }}>
@@ -286,13 +305,14 @@ function WeekGrid({
 
 // ─── Day Grid ───────────────────────────────────────────────────────────────
 function DayGrid({
-  appointments, availability, patientName, loading, onSlotClick, onCancel, onDelete,
+  appointments, availability, patientName, loading, onSlotClick, onApptOpen, onCancel, onDelete,
 }: {
   appointments: ReturnType<typeof useAppointments>["data"] extends (infer T)[] | undefined ? T[] : never[];
   availability: Slot[];
   patientName: (id: string) => string;
   loading: boolean;
   onSlotClick: (s: Slot) => void;
+  onApptOpen: (a: Appointment) => void;
   onCancel: (id: string) => void;
   onDelete: (id: string, name: string) => void;
 }) {
@@ -332,14 +352,19 @@ function DayGrid({
                 <div className="p-2">
                   {appt && st ? (
                     <div
-                      className="flex items-center gap-3.5 rounded-xl p-3 transition-all hover:translate-x-0.5 hover:shadow-[0_6px_18px_rgba(16,24,40,.12)]"
+                      onDoubleClick={() => onApptOpen(appt)}
+                      title="Duplo clique para ver detalhes"
+                      className="flex cursor-pointer items-center gap-3.5 rounded-xl p-3 transition-all hover:translate-x-0.5 hover:shadow-[0_6px_18px_rgba(16,24,40,.12)]"
                       style={{ background: st.bg, borderLeft: `3px solid ${st.border}` }}
                     >
                       <div className="flex-1 min-w-0">
                         <div className="text-[10px] font-extrabold uppercase tracking-[.04em]" style={{ color: st.color }}>{st.label}</div>
                         <div className="mt-0.5 text-[15px] font-bold text-foreground">{patientName(appt.patient_id)}</div>
                       </div>
-                      <div className="flex shrink-0 items-center gap-1">
+                      <div
+                        className="flex shrink-0 items-center gap-1"
+                        onDoubleClick={(e) => e.stopPropagation()}
+                      >
                         {canCancel && (
                           <button
                             onClick={() => onCancel(appt.id)}

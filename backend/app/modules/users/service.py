@@ -14,6 +14,10 @@ async def list_users(session: AsyncSession, clinic_id: uuid.UUID | str) -> list[
     return await repository.list_all(session, clinic_id)
 
 
+async def list_dentists(session: AsyncSession, clinic_id: uuid.UUID | str) -> list[User]:
+    return await repository.list_dentists(session, clinic_id)
+
+
 async def get_user(
     session: AsyncSession, clinic_id: uuid.UUID | str, user_id: uuid.UUID | str
 ) -> User:
