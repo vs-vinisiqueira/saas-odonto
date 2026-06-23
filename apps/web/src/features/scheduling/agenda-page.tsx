@@ -72,7 +72,7 @@ export function AgendaPage() {
   const today = todayStr();
 
   return (
-    <div className="flex h-[calc(100vh-66px)] flex-col gap-0 pb-0">
+    <div className="flex h-full min-h-[560px] flex-col gap-0 pb-0">
       {/* Header */}
       <div className="flex flex-wrap items-center gap-3 pb-4">
         <div>
@@ -222,9 +222,11 @@ function WeekGrid({
   }, [appointments]);
 
   return (
-    <div className="flex min-h-0 flex-1 overflow-hidden rounded-[18px] border bg-card shadow-[0_1px_2px_rgba(16,24,40,.04)]">
-      {/* Header dias */}
-      <div className="flex min-h-0 w-full flex-col">
+    <div className="min-h-0 flex-1 overflow-hidden rounded-[18px] border bg-card shadow-[0_1px_2px_rgba(16,24,40,.04)]">
+      {/* Rola horizontalmente no mobile para os 7 dias não ficarem ilegíveis */}
+      <div className="h-full overflow-x-auto">
+        {/* Header dias */}
+        <div className="flex h-full min-h-0 min-w-[620px] flex-col">
         <div className="grid shrink-0 border-b" style={{ gridTemplateColumns: "62px repeat(7, 1fr)" }}>
           <div className="border-r border-border-soft" />
           {weekDays.map((d) => {
@@ -297,6 +299,7 @@ function WeekGrid({
               );
             })}
           </div>
+        </div>
         </div>
       </div>
     </div>

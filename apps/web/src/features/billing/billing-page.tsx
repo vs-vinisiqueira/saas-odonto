@@ -39,7 +39,7 @@ export function BillingPage() {
   return (
     <div className="mx-auto flex max-w-[1140px] flex-col gap-5 pb-12">
       {/* Header */}
-      <div className="flex items-end justify-between gap-4">
+      <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
           <h2 className="text-2xl font-extrabold tracking-tight text-foreground">Cobranças</h2>
           <p className="mt-1 text-sm text-muted-foreground">
@@ -64,6 +64,8 @@ export function BillingPage() {
 
       {/* Tabela */}
       <div className="animate-fade-up overflow-hidden rounded-[18px] border bg-card shadow-[0_1px_2px_rgba(16,24,40,.04)]" style={{ animationDelay: ".12s" }}>
+        <div className="overflow-x-auto">
+        <div className="min-w-[720px]">
         {/* Cabeçalho */}
         <div className="grid grid-cols-[2fr_1.6fr_1.2fr_1.2fr_auto] items-center gap-3 border-b border-border-soft px-[22px] py-3 text-[11.5px] font-bold uppercase tracking-[.04em] text-muted-foreground">
           <div>Descrição</div>
@@ -142,6 +144,8 @@ export function BillingPage() {
             </div>
           );
         })}
+        </div>
+        </div>
       </div>
 
       <ChargeFormDialog open={dialogOpen} onOpenChange={setDialogOpen} />

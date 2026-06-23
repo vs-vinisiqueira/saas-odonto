@@ -52,7 +52,7 @@ export function PatientsPage() {
   return (
     <div className="mx-auto flex max-w-[1180px] flex-col gap-5 pb-12">
       {/* Header */}
-      <div className="flex items-end justify-between gap-4">
+      <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
           <h2 className="text-2xl font-extrabold tracking-tight text-foreground">Pacientes</h2>
           <p className="mt-1 text-sm text-muted-foreground">
@@ -83,13 +83,16 @@ export function PatientsPage() {
           </div>
         </div>
 
-        {/* Header da tabela */}
-        <div className="grid grid-cols-[2.4fr_1.6fr_2fr_0.8fr] items-center gap-3 border-b border-border-soft px-[22px] py-3 text-[11.5px] font-bold uppercase tracking-[.04em] text-muted-foreground">
-          <div>Paciente</div>
-          <div>Telefone</div>
-          <div>E-mail</div>
-          <div className="text-right">Ações</div>
-        </div>
+        {/* Tabela: rola horizontalmente no mobile para não espremer colunas/botões */}
+        <div className="overflow-x-auto">
+          <div className="min-w-[700px]">
+            {/* Header da tabela */}
+            <div className="grid grid-cols-[2.2fr_1.4fr_1.8fr_120px] items-center gap-3 border-b border-border-soft px-[22px] py-3 text-[11.5px] font-bold uppercase tracking-[.04em] text-muted-foreground">
+              <div>Paciente</div>
+              <div>Telefone</div>
+              <div>E-mail</div>
+              <div className="text-right">Ações</div>
+            </div>
 
         {/* Estado de carga */}
         {isLoading && (
@@ -107,16 +110,18 @@ export function PatientsPage() {
         )}
 
         {/* Linhas */}
-        {filtered.map((p, i) => (
-          <PatientRow
-            key={p.id}
-            p={p}
-            delay={`${i * 0.04}s`}
-            onOpen={() => navigate(`/pacientes/${p.id}`)}
-            onEdit={() => openEdit(p)}
-            onDelete={() => handleDelete(p)}
-          />
-        ))}
+            {filtered.map((p, i) => (
+              <PatientRow
+                key={p.id}
+                p={p}
+                delay={`${i * 0.04}s`}
+                onOpen={() => navigate(`/pacientes/${p.id}`)}
+                onEdit={() => openEdit(p)}
+                onDelete={() => handleDelete(p)}
+              />
+            ))}
+          </div>
+        </div>
       </div>
 
       <PatientFormDialog open={dialogOpen} onOpenChange={setDialogOpen} patient={editing} />
@@ -141,7 +146,7 @@ function PatientRow({
 
   return (
     <div
-      className="animate-fade-up grid grid-cols-[2.4fr_1.6fr_2fr_0.8fr] items-center gap-3 border-b border-border-soft px-[22px] py-[13px] transition-colors hover:bg-secondary last:border-0"
+      className="animate-fade-up grid grid-cols-[2.2fr_1.4fr_1.8fr_120px] items-center gap-3 border-b border-border-soft px-[22px] py-[13px] transition-colors hover:bg-secondary last:border-0"
       style={{ animationDelay: delay }}
     >
       {/* Avatar + nome */}

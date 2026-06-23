@@ -29,9 +29,9 @@ export function ConfigPage() {
         </p>
       </div>
 
-      <div className="grid grid-cols-[220px_1fr] gap-6">
-        {/* Navegação de seções */}
-        <nav className="flex flex-col gap-1">
+      <div className="grid grid-cols-1 gap-5 md:grid-cols-[220px_1fr] md:gap-6">
+        {/* Navegação de seções — empilha no mobile, vira coluna lateral no desktop */}
+        <nav className="flex gap-1 overflow-x-auto pb-1 md:flex-col md:overflow-visible md:pb-0">
           {SECTIONS.map((s) => {
             const Icon = s.icon;
             const isActive = active === s.id;
@@ -40,7 +40,7 @@ export function ConfigPage() {
                 key={s.id}
                 onClick={() => setActive(s.id)}
                 className={[
-                  "flex items-center justify-between gap-2 rounded-[11px] px-3.5 py-2.5 text-left text-sm font-semibold transition-colors",
+                  "flex shrink-0 items-center justify-between gap-2 whitespace-nowrap rounded-[11px] px-3.5 py-2.5 text-left text-sm font-semibold transition-colors",
                   isActive
                     ? "bg-primary/10 text-primary"
                     : "text-muted-foreground hover:bg-secondary hover:text-foreground",

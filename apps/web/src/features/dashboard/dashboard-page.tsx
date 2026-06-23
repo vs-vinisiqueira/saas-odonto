@@ -192,7 +192,7 @@ export function DashboardPage() {
   return (
     <div className="mx-auto flex max-w-[1240px] flex-col gap-5 pb-12">
       {/* Header */}
-      <div className="flex items-end justify-between gap-4">
+      <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
           <h2 className="text-2xl font-extrabold tracking-tight text-foreground">
             Olá, bem-vindo(a) 👋

@@ -49,7 +49,7 @@ export function UsersSection() {
 
   return (
     <div className="flex flex-col gap-5">
-      <div className="flex items-end justify-between gap-4">
+      <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
           <h3 className="text-lg font-bold text-foreground">Usuários da equipe</h3>
           <p className="mt-0.5 text-sm text-muted-foreground">
@@ -66,7 +66,9 @@ export function UsersSection() {
       </div>
 
       <div className="overflow-hidden rounded-[18px] border bg-card shadow-[0_1px_2px_rgba(16,24,40,.04)]">
-        <div className="grid grid-cols-[2.4fr_2fr_1.2fr_1fr_1fr] items-center gap-3 border-b border-border-soft px-[22px] py-3 text-[11.5px] font-bold uppercase tracking-[.04em] text-muted-foreground">
+        <div className="overflow-x-auto">
+        <div className="min-w-[780px]">
+        <div className="grid grid-cols-[2.4fr_2fr_1.2fr_1fr_120px] items-center gap-3 border-b border-border-soft px-[22px] py-3 text-[11.5px] font-bold uppercase tracking-[.04em] text-muted-foreground">
           <div>Usuário</div>
           <div>E-mail</div>
           <div>Papel</div>
@@ -93,7 +95,7 @@ export function UsersSection() {
           return (
             <div
               key={u.id}
-              className="grid grid-cols-[2.4fr_2fr_1.2fr_1fr_1fr] items-center gap-3 border-b border-border-soft px-[22px] py-[13px] transition-colors hover:bg-secondary last:border-0"
+              className="grid grid-cols-[2.4fr_2fr_1.2fr_1fr_120px] items-center gap-3 border-b border-border-soft px-[22px] py-[13px] transition-colors hover:bg-secondary last:border-0"
             >
               <div className="flex min-w-0 items-center gap-3">
                 <div
@@ -155,6 +157,8 @@ export function UsersSection() {
             </div>
           );
         })}
+        </div>
+        </div>
       </div>
 
       <UserFormDialog open={formOpen} onOpenChange={setFormOpen} user={editing} />
