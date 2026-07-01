@@ -65,10 +65,11 @@ export function BillingPage() {
       {/* Tabela */}
       <div className="animate-fade-up overflow-hidden rounded-[18px] border bg-card shadow-[0_1px_2px_rgba(16,24,40,.04)]" style={{ animationDelay: ".12s" }}>
         <div className="overflow-x-auto">
-        <div className="min-w-[720px]">
+        <div className="min-w-[820px]">
         {/* Cabeçalho */}
-        <div className="grid grid-cols-[2fr_1.6fr_1.2fr_1.2fr_auto] items-center gap-3 border-b border-border-soft px-[22px] py-3 text-[11.5px] font-bold uppercase tracking-[.04em] text-muted-foreground">
+        <div className="grid grid-cols-[1.8fr_1.4fr_1.4fr_1.1fr_1.1fr_auto] items-center gap-3 border-b border-border-soft px-[22px] py-3 text-[11.5px] font-bold uppercase tracking-[.04em] text-muted-foreground">
           <div>Descrição</div>
+          <div>Paciente</div>
           <div>Referência</div>
           <div>Valor</div>
           <div>Status</div>
@@ -92,7 +93,7 @@ export function BillingPage() {
           return (
             <div
               key={c.id}
-              className="grid grid-cols-[2fr_1.6fr_1.2fr_1.2fr_auto] items-center gap-3 border-b border-border-soft px-[22px] py-[14px] transition-colors hover:bg-secondary last:border-0"
+              className="grid grid-cols-[1.8fr_1.4fr_1.4fr_1.1fr_1.1fr_auto] items-center gap-3 border-b border-border-soft px-[22px] py-[14px] transition-colors hover:bg-secondary last:border-0"
             >
               {/* Descrição */}
               <div className="flex min-w-0 items-center gap-3">
@@ -103,6 +104,11 @@ export function BillingPage() {
                   {c.descricao || "Cobrança Pix"}
                 </span>
               </div>
+
+              {/* Paciente */}
+              <span className="truncate text-sm text-foreground">
+                {c.patient_nome ?? "—"}
+              </span>
 
               {/* Referência */}
               <span className="truncate font-mono text-[12px] text-muted-foreground">

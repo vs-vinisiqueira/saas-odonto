@@ -172,11 +172,6 @@ export function DashboardPage() {
   const convs      = useConversations();
   const charges    = useCharges();
 
-  const patientName = useMemo(() => {
-    const map = new Map((patients.data ?? []).map((p) => [p.id, p.nome]));
-    return (id: string) => map.get(id) ?? "Paciente";
-  }, [patients.data]);
-
   const byStatus = weekStats.data?.by_status ?? {};
   const perDay   = weekStats.data?.per_day ?? {};
 
@@ -284,7 +279,7 @@ export function DashboardPage() {
                 <ApptRow
                   key={a.id}
                   time={formatTimeUTC(a.starts_at)}
-                  name={patientName(a.patient_id)}
+                  name={a.patient_nome ?? "Paciente"}
                   status={a.status}
                 />
               ))

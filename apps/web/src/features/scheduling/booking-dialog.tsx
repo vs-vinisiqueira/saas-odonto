@@ -11,7 +11,8 @@ import { useDentists } from "@/features/users/api";
 import { errorMessage } from "@/lib/api";
 import { formatTimeUTC, todayStr } from "@/lib/datetime";
 import { cn } from "@/lib/utils";
-import { useCreateAppointment, type Slot } from "./api";
+import { useCreateAppointment, type AppointmentTipo, type Slot } from "./api";
+import { TIPO_OPTIONS } from "./tipo";
 
 interface Props {
   open: boolean;
@@ -32,6 +33,7 @@ export function BookingDialog({ open, onOpenChange, slot, defaultDate }: Props) 
   const create = useCreateAppointment();
   const [patientId, setPatientId] = useState("");
   const [dentistId, setDentistId] = useState("");
+  const [tipo, setTipo] = useState<AppointmentTipo>("avaliacao");
   const [notes, setNotes] = useState("");
   // Data/hora manuais (em UTC), usadas quando não há slot pré-selecionado.
   const [date, setDate] = useState("");
@@ -44,6 +46,7 @@ export function BookingDialog({ open, onOpenChange, slot, defaultDate }: Props) 
     if (open) {
       setPatientId("");
       setDentistId("");
+      setTipo("avaliacao");
       setNotes("");
       setDate(defaultDate ?? todayStr());
       setTime("09:00");
@@ -75,6 +78,7 @@ export function BookingDialog({ open, onOpenChange, slot, defaultDate }: Props) 
         starts_at: startsAt,
         duration_min: 30,
         dentist_id: dentistId || undefined,
+        tipo,
         notes: notes.trim() || undefined,
       });
       onOpenChange(false);
@@ -138,6 +142,22 @@ export function BookingDialog({ open, onOpenChange, slot, defaultDate }: Props) 
               Nenhum paciente cadastrado. Cadastre em "Pacientes" primeiro.
             </p>
           )}
+        </div>
+
+        <div className="flex flex-col gap-1.5">
+          <Label htmlFor="tipo">Tipo de consulta</Label>
+          <select
+            id="tipo"
+            value={tipo}
+            onChange={(e) => setTipo(e.target.value as AppointmentTipo)}
+            className={selectClass}
+          >
+            {TIPO_OPTIONS.map((t) => (
+              <option key={t.value} value={t.value}>
+                {t.label}
+              </option>
+            ))}
+          </select>
         </div>
 
         <div className="flex flex-col gap-1.5">

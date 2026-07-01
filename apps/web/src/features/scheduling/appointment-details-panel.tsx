@@ -15,7 +15,10 @@ import {
   useDeleteAppointment,
   useUpdateAppointment,
   type Appointment,
+  type AppointmentTipo,
+  type UpdateAppointmentInput,
 } from "./api";
+import { TIPO_OPTIONS } from "./tipo";
 
 interface Props {
   open: boolean;
@@ -78,11 +81,11 @@ export function AppointmentDetailsPanel({ open, onOpenChange, appointment }: Pro
   const appt = appointment;
   const dentists = dentistsQuery.data ?? [];
   const patient = patients.data?.find((p) => p.id === appt.patient_id);
-  const patientName = patient?.nome ?? "Paciente";
+  const patientName = appt.patient_nome ?? patient?.nome ?? "Paciente";
   const st = STATUS_INFO[appt.status] ?? STATUS_INFO.scheduled;
   const dateStr = appt.starts_at.slice(0, 10);
 
-  async function patch(data: { status?: string; dentist_id?: string; notes?: string }) {
+  async function patch(data: UpdateAppointmentInput) {
     setError(null);
     try {
       await update.mutateAsync({ id: appt.id, data });
@@ -94,6 +97,10 @@ export function AppointmentDetailsPanel({ open, onOpenChange, appointment }: Pro
   function handleDentistChange(value: string) {
     if (!value) return; // backend não permite remover o dentista; só atribuir/trocar
     void patch({ dentist_id: value });
+  }
+
+  function handleTipoChange(value: AppointmentTipo) {
+    void patch({ tipo: value });
   }
 
   function handleNotesBlur() {
@@ -176,6 +183,28 @@ export function AppointmentDetailsPanel({ open, onOpenChange, appointment }: Pro
               />
               <Info label="Duração" value={`${durationMin(appt)} min`} />
               <Info label="Paciente" value={patient?.telefone ?? "—"} />
+            </div>
+
+            {/* Tipo de consulta */}
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="appt-tipo">Tipo de consulta</Label>
+              <select
+                id="appt-tipo"
+                value={appt.tipo}
+                disabled={busy}
+                onChange={(e) => handleTipoChange(e.target.value as AppointmentTipo)}
+                className={cn(
+                  "h-10 w-full rounded-md border border-input bg-background px-3 text-sm",
+                  "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                  "disabled:opacity-50",
+                )}
+              >
+                {TIPO_OPTIONS.map((t) => (
+                  <option key={t.value} value={t.value}>
+                    {t.label}
+                  </option>
+                ))}
+              </select>
             </div>
 
             {/* Dentista */}

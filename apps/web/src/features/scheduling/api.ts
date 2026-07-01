@@ -7,13 +7,23 @@ export interface Slot {
   ends_at: string;
 }
 
+export type AppointmentTipo =
+  | "avaliacao"
+  | "limpeza"
+  | "restauracao"
+  | "canal"
+  | "clareamento"
+  | "cirurgia";
+
 export interface Appointment {
   id: string;
   patient_id: string;
+  patient_nome: string | null;
   dentist_id: string | null;
   starts_at: string;
   ends_at: string;
   status: string;
+  tipo: AppointmentTipo;
   notes: string | null;
 }
 
@@ -22,6 +32,7 @@ export interface CreateAppointmentInput {
   starts_at: string;
   duration_min?: number;
   dentist_id?: string | null;
+  tipo?: AppointmentTipo;
   notes?: string | null;
 }
 
@@ -29,6 +40,7 @@ export interface CreateAppointmentInput {
 export interface UpdateAppointmentInput {
   status?: string;
   dentist_id?: string;
+  tipo?: AppointmentTipo;
   notes?: string;
 }
 
@@ -46,6 +58,19 @@ export function useAppointments(date: string) {
     queryFn: async () =>
       (await api.get<Appointment[]>("/scheduling/appointments", { params: { date } }))
         .data,
+  });
+}
+
+/** Agendamentos de um range de dias (ex.: a semana inteira da visão semanal). */
+export function useAppointmentsRange(from: string, to: string) {
+  return useQuery({
+    queryKey: ["appointments", "range", from, to],
+    queryFn: async () =>
+      (
+        await api.get<Appointment[]>("/scheduling/appointments", {
+          params: { from, to },
+        })
+      ).data,
   });
 }
 

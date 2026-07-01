@@ -26,11 +26,16 @@ async def test_charge_and_webhook_flow(client, make_clinic_with_owner):
     owner = await make_clinic_with_owner(password_hash=hash_password(password))
     h = await _login(client, owner["email"], password)
 
+    pr = await client.post(
+        "/patients", headers=h, json={"nome": "Carla", "telefone": "+5511966665555"}
+    )
+    patient_id = pr.json()["id"]
+
     # cria cobrança
     r = await client.post(
         "/billing/charges",
         headers=h,
-        json={"valor": "150.00", "descricao": "Limpeza"},
+        json={"valor": "150.00", "descricao": "Limpeza", "patient_id": patient_id},
     )
     assert r.status_code == 201, r.text
     charge = r.json()
@@ -38,10 +43,12 @@ async def test_charge_and_webhook_flow(client, make_clinic_with_owner):
     assert charge["charge_id"].startswith("mock_")
     assert charge["qr_code"]
     assert float(charge["valor"]) == 150.0
+    assert charge["patient_nome"] == "Carla"
 
-    # aparece na listagem
+    # aparece na listagem, já com o nome do paciente
     r = await client.get("/billing/charges", headers=h)
-    assert any(p["id"] == charge["id"] for p in r.json())
+    listed = next(p for p in r.json() if p["id"] == charge["id"])
+    assert listed["patient_nome"] == "Carla"
 
     # provedor confirma o pagamento via webhook (sem JWT)
     r = await client.post(

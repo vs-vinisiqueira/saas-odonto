@@ -18,5 +18,6 @@ export interface Payment {
   qr_code: string | null;
   qr_code_base64: string | null;
   patient_id: string | null;
+  patient_nome: string | null;
   appointment_id: string | null;
 }

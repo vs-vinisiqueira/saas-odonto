@@ -48,7 +48,7 @@ async def record_exchange(
 
 
 async def list_conversations(
-    session: AsyncSession, clinic_id: uuid.UUID | str
+    session: AsyncSession, clinic_id: uuid.UUID | str, q: str | None = None
 ) -> list[ConversationOut]:
     convs = await repository.list_all(session, clinic_id)
     if not convs:
@@ -62,17 +62,25 @@ async def list_conversations(
     out: list[ConversationOut] = []
     for c in convs:
         msg = latest.get(c.id)
+        patient_nome = patients.get(c.patient_id) if c.patient_id else None
+        if q:
+            needle = q.strip().lower()
+            haystack = f"{patient_nome or ''} {c.external_number}".lower()
+            if needle not in haystack:
+                continue
         out.append(
             ConversationOut(
                 id=c.id,
                 patient_id=c.patient_id,
-                patient_nome=patients.get(c.patient_id) if c.patient_id else None,
+                patient_nome=patient_nome,
                 external_number=c.external_number,
                 channel=c.channel,
                 ai_enabled=c.ai_enabled,
                 last_message_at=c.last_message_at,
                 last_message_preview=msg.text if msg else None,
                 last_message_sender=msg.sender if msg else None,
+                # Não lida: última mensagem é do paciente e a clínica ainda não respondeu.
+                unread=msg is not None and msg.sender == SENDER_PATIENT,
             )
         )
     return out

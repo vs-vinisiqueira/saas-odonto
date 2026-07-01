@@ -13,6 +13,7 @@ import { NavLink, Outlet, useNavigate } from "react-router-dom";
 
 import { Spinner } from "@/components/ui/spinner";
 import { useMyClinic } from "@/features/clinic/api";
+import { useConversations } from "@/features/conversations/api";
 import { useAuthStore } from "@/lib/auth-store";
 import { useThemeStore } from "@/lib/theme-store";
 import { cn } from "@/lib/utils";
@@ -54,8 +55,9 @@ export function AppShell() {
   const clear = useAuthStore((s) => s.clear);
   const user = useAuthStore((s) => s.user);
   const clinic = useMyClinic();
+  const conversations = useConversations();
 
-  const unreadCount = 0; // TODO: track unread count via useConversations()
+  const unreadCount = conversations.data?.filter((c) => c.unread).length ?? 0;
 
   const clinicName = clinic.data?.nome ?? "SaaS Odonto";
   const userName = user?.role === "owner" ? clinicName : (user?.role ?? "Usuário");

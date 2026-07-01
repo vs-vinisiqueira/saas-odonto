@@ -3,12 +3,15 @@ import uuid
 
 from pydantic import BaseModel, ConfigDict, Field
 
+from app.modules.scheduling.models import TIPO_AVALIACAO
+
 
 class AppointmentCreate(BaseModel):
     patient_id: uuid.UUID
     starts_at: dt.datetime
     duration_min: int = Field(default=30, ge=5, le=480)
     dentist_id: uuid.UUID | None = None
+    tipo: str = TIPO_AVALIACAO
     notes: str | None = None
 
 
@@ -17,6 +20,7 @@ class AppointmentUpdate(BaseModel):
     duration_min: int | None = Field(default=None, ge=5, le=480)
     dentist_id: uuid.UUID | None = None
     status: str | None = None
+    tipo: str | None = None
     notes: str | None = None
 
 
@@ -25,10 +29,12 @@ class AppointmentOut(BaseModel):
 
     id: uuid.UUID
     patient_id: uuid.UUID
+    patient_nome: str | None = None
     dentist_id: uuid.UUID | None
     starts_at: dt.datetime
     ends_at: dt.datetime
     status: str
+    tipo: str
     notes: str | None
 
 

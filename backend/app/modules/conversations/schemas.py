@@ -26,6 +26,7 @@ class ConversationOut(BaseModel):
     last_message_at: dt.datetime | None
     last_message_preview: str | None
     last_message_sender: str | None
+    unread: bool
 
 
 class ManualMessageIn(BaseModel):

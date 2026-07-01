@@ -10,7 +10,7 @@ Tudo escopado por tenant via `get_tenant_session` (RLS), igual aos demais módul
 
 import uuid
 
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, Depends, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.tenant import get_tenant_session
@@ -32,10 +32,11 @@ _channel = get_whatsapp_channel()
 
 @router.get("", response_model=list[ConversationOut])
 async def list_conversations(
+    q: str | None = Query(default=None, description="Filtra por nome do paciente ou telefone"),
     user: CurrentUser = Depends(get_current_user),
     session: AsyncSession = Depends(get_tenant_session),
 ):
-    return await service.list_conversations(session, user.clinic_id)
+    return await service.list_conversations(session, user.clinic_id, q)
 
 
 @router.get("/{conversation_id}/messages", response_model=list[MessageOut])

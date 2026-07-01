@@ -2,7 +2,6 @@ import { ChevronLeft, ChevronRight, Plus, Trash2, X } from "lucide-react";
 import { useMemo, useState } from "react";
 
 import { Spinner } from "@/components/ui/spinner";
-import { usePatients } from "@/features/patients/api";
 import {
   addDaysStr,
   formatDateLabel,
@@ -11,6 +10,7 @@ import {
 import { cn } from "@/lib/utils";
 import {
   useAppointments,
+  useAppointmentsRange,
   useAvailability,
   useCancelAppointment,
   useDeleteAppointment,
@@ -19,6 +19,7 @@ import {
 } from "./api";
 import { AppointmentDetailsPanel } from "./appointment-details-panel";
 import { BookingDialog } from "./booking-dialog";
+import { TIPO_INFO } from "./tipo";
 
 const PT_DAYS_SHORT = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
 const HOURS = [8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18];
@@ -43,14 +44,10 @@ export function AgendaPage() {
 
   const availability = useAvailability(date);
   const appointments = useAppointments(date);
-  const patients = usePatients();
   const cancel = useCancelAppointment();
   const deleteAppt = useDeleteAppointment();
 
-  const patientName = useMemo(() => {
-    const map = new Map((patients.data ?? []).map((p) => [p.id, p.nome]));
-    return (id: string) => map.get(id) ?? "Paciente";
-  }, [patients.data]);
+  const patientName = (appt: Appointment) => appt.patient_nome ?? "Paciente";
 
   const weekDays = useMemo(() => {
     const [y, mo, da] = date.split("-").map(Number);
@@ -58,6 +55,8 @@ export function AgendaPage() {
     const weekStart = addDaysStr(date, -dow);
     return Array.from({ length: 7 }, (_, i) => addDaysStr(weekStart, i));
   }, [date]);
+
+  const appointmentsWeek = useAppointmentsRange(weekDays[0], weekDays[6]);
 
   function openSlot(s: Slot) {
     setSlot(s);
@@ -167,7 +166,7 @@ export function AgendaPage() {
         <WeekGrid
           weekDays={weekDays}
           today={today}
-          appointments={appointments.data ?? []}
+          appointments={appointmentsWeek.data ?? []}
           patientName={patientName}
           onSlotClick={(d) => { setDate(d); setView("day"); }}
           onApptOpen={openDetails}
@@ -204,7 +203,7 @@ function WeekGrid({
 }: {
   weekDays: string[]; today: string;
   appointments: ReturnType<typeof useAppointments>["data"] extends (infer T)[] | undefined ? T[] : never[];
-  patientName: (id: string) => string;
+  patientName: (appt: Appointment) => string;
   onSlotClick: (d: string) => void;
   onApptOpen: (a: Appointment) => void;
 }) {
@@ -284,11 +283,18 @@ function WeekGrid({
                             className="group h-full cursor-pointer overflow-hidden rounded-lg p-1.5 transition-all hover:scale-[1.04] hover:shadow-[0_6px_16px_rgba(16,24,40,.16)]"
                             style={{ background: st.bg, borderLeft: `3px solid ${st.border}` }}
                           >
-                            <div className="truncate text-[9.5px] font-extrabold uppercase leading-none tracking-[.03em]" style={{ color: st.color }}>
-                              {st.label}
+                            <div className="flex items-center gap-1">
+                              <span
+                                className="h-1.5 w-1.5 shrink-0 rounded-full"
+                                style={{ background: (TIPO_INFO[appt.tipo] ?? TIPO_INFO.avaliacao).color }}
+                                title={(TIPO_INFO[appt.tipo] ?? TIPO_INFO.avaliacao).label}
+                              />
+                              <div className="truncate text-[9.5px] font-extrabold uppercase leading-none tracking-[.03em]" style={{ color: st.color }}>
+                                {st.label}
+                              </div>
                             </div>
                             <div className="mt-0.5 truncate text-xs font-semibold text-foreground">
-                              {patientName(appt.patient_id)}
+                              {patientName(appt)}
                             </div>
                           </div>
                         )}
@@ -312,7 +318,7 @@ function DayGrid({
 }: {
   appointments: ReturnType<typeof useAppointments>["data"] extends (infer T)[] | undefined ? T[] : never[];
   availability: Slot[];
-  patientName: (id: string) => string;
+  patientName: (appt: Appointment) => string;
   loading: boolean;
   onSlotClick: (s: Slot) => void;
   onApptOpen: (a: Appointment) => void;
@@ -361,8 +367,17 @@ function DayGrid({
                       style={{ background: st.bg, borderLeft: `3px solid ${st.border}` }}
                     >
                       <div className="flex-1 min-w-0">
-                        <div className="text-[10px] font-extrabold uppercase tracking-[.04em]" style={{ color: st.color }}>{st.label}</div>
-                        <div className="mt-0.5 text-[15px] font-bold text-foreground">{patientName(appt.patient_id)}</div>
+                        <div className="flex items-center gap-1.5">
+                          <span
+                            className="h-2 w-2 shrink-0 rounded-full"
+                            style={{ background: (TIPO_INFO[appt.tipo] ?? TIPO_INFO.avaliacao).color }}
+                          />
+                          <div className="text-[10px] font-extrabold uppercase tracking-[.04em]" style={{ color: st.color }}>{st.label}</div>
+                          <span className="text-[10px] font-semibold text-muted-foreground">
+                            · {(TIPO_INFO[appt.tipo] ?? TIPO_INFO.avaliacao).label}
+                          </span>
+                        </div>
+                        <div className="mt-0.5 text-[15px] font-bold text-foreground">{patientName(appt)}</div>
                       </div>
                       <div
                         className="flex shrink-0 items-center gap-1"
@@ -378,7 +393,7 @@ function DayGrid({
                           </button>
                         )}
                         <button
-                          onClick={() => onDelete(appt.id, patientName(appt.patient_id))}
+                          onClick={() => onDelete(appt.id, patientName(appt))}
                           title="Excluir definitivamente"
                           className="flex h-7 w-7 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-red-50 hover:text-red-600"
                         >

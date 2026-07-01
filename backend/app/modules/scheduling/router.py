@@ -52,10 +52,14 @@ async def availability(
 async def list_appointments(
     date: dt.date | None = Query(default=None),
     dentist_id: uuid.UUID | None = Query(default=None),
+    from_: dt.date | None = Query(default=None, alias="from", description="Início do range (YYYY-MM-DD)"),
+    to: dt.date | None = Query(default=None, description="Fim do range, inclusivo (YYYY-MM-DD)"),
     user: CurrentUser = Depends(get_current_user),
     session: AsyncSession = Depends(get_tenant_session),
 ):
-    return await service.list_appointments(session, user.clinic_id, date, dentist_id)
+    return await service.list_appointments(
+        session, user.clinic_id, date, dentist_id, from_, to
+    )
 
 
 @router.post(

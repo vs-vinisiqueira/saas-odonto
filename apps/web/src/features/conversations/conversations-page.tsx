@@ -99,14 +99,19 @@ function ConvRow({ c, index, active, onSelect }: { c: Conversation; index: numbe
       </div>
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-1.5">
-          <span className="flex-1 truncate text-sm font-bold text-foreground">{displayName(c)}</span>
+          <span className={cn("flex-1 truncate text-sm text-foreground", c.unread ? "font-extrabold" : "font-bold")}>
+            {displayName(c)}
+          </span>
           <span className="shrink-0 text-[11px] text-muted-foreground">{formatRelative(c.last_message_at)}</span>
         </div>
         <div className="mt-0.5 flex items-center gap-1">
           {c.last_message_sender === "ai" && <Sparkles className="h-3 w-3 shrink-0 text-primary" />}
-          <span className="truncate text-xs text-muted-foreground">{c.last_message_preview ?? "—"}</span>
+          <span className={cn("truncate text-xs", c.unread ? "font-semibold text-foreground" : "text-muted-foreground")}>
+            {c.last_message_preview ?? "—"}
+          </span>
         </div>
       </div>
+      {c.unread && <span className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-primary" />}
     </button>
   );
 }
@@ -242,7 +247,8 @@ function Thread({ conversation, index }: { conversation: Conversation; index: nu
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
 export function ConversationsPage() {
-  const conversations = useConversations();
+  const [search, setSearch] = useState("");
+  const conversations = useConversations(search.trim() || undefined);
   const [activeId, setActiveId] = useState<string | null>(null);
 
   const items = conversations.data ?? [];
@@ -264,6 +270,8 @@ export function ConversationsPage() {
             <div className="relative">
               <svg className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="11" cy="11" r="8" /><path d="m21 21-4.3-4.3" /></svg>
               <input
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
                 placeholder="Buscar conversa..."
                 className="w-full rounded-[10px] border border-input bg-secondary py-2 pl-9 pr-3 text-[13.5px] text-foreground placeholder:text-muted-foreground focus:border-primary focus:bg-card focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all"
               />
@@ -279,7 +287,9 @@ export function ConversationsPage() {
               </div>
             ) : items.length === 0 ? (
               <p className="p-6 text-center text-sm text-muted-foreground">
-                Nenhuma conversa ainda. Quando um paciente mandar mensagem no WhatsApp, ela aparece aqui.
+                {search.trim()
+                  ? "Nenhuma conversa encontrada para essa busca."
+                  : "Nenhuma conversa ainda. Quando um paciente mandar mensagem no WhatsApp, ela aparece aqui."}
               </p>
             ) : (
               <div className="flex flex-col gap-0.5">

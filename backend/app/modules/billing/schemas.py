@@ -23,6 +23,7 @@ class PaymentOut(BaseModel):
     qr_code: str | None
     qr_code_base64: str | None
     patient_id: uuid.UUID | None
+    patient_nome: str | None = None
     appointment_id: uuid.UUID | None
 
 

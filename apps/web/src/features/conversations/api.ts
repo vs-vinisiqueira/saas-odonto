@@ -14,6 +14,7 @@ export interface Conversation {
   last_message_at: string | null;
   last_message_preview: string | null;
   last_message_sender: MessageSender | null;
+  unread: boolean;
 }
 
 export interface Message {
@@ -24,10 +25,15 @@ export interface Message {
   created_at: string;
 }
 
-export function useConversations() {
+export function useConversations(q?: string) {
   return useQuery({
-    queryKey: ["conversations"],
-    queryFn: async () => (await api.get<Conversation[]>("/conversations")).data,
+    queryKey: ["conversations", q ?? ""],
+    queryFn: async () =>
+      (
+        await api.get<Conversation[]>("/conversations", {
+          params: q ? { q } : undefined,
+        })
+      ).data,
     // Inbox: atualiza sozinho para refletir novas mensagens do agente.
     refetchInterval: 15_000,
   });

@@ -69,6 +69,14 @@ async def test_webhook_persists_conversation_and_messages(client, make_clinic_wi
     assert conv["external_number"] == PHONE
     assert conv["channel"] == "mock"
     assert conv["last_message_preview"]
+    # última mensagem foi da IA (respondeu o paciente) -> não fica marcada como não lida
+    assert conv["unread"] is False
+
+    # busca por telefone encontra a conversa; busca sem match não encontra
+    r = await client.get("/conversations", params={"q": PHONE[-4:]}, headers=headers)
+    assert len(r.json()) == 1
+    r = await client.get("/conversations", params={"q": "não-existe"}, headers=headers)
+    assert r.json() == []
 
     messages = (
         await client.get(f"/conversations/{conv['id']}/messages", headers=headers)

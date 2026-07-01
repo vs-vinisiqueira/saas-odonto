@@ -19,6 +19,7 @@ from app.modules.billing.factory import get_payment_gateway
 from app.modules.billing.gateway import PaymentGateway
 from app.modules.billing.models import PAYMENT_STATUSES, Payment
 from app.modules.billing.schemas import ChargeCreate
+from app.modules.patients import repository as patients_repo
 from app.shared.exceptions import Conflict, NotFound
 
 logger = logging.getLogger("billing.service")
@@ -66,13 +67,30 @@ async def create_charge(
         qr_code=charge.qr_code,
         qr_code_base64=charge.qr_code_base64,
     )
-    return await repository.add(session, payment)
+    payment = await repository.add(session, payment)
+    return await _attach_patient_nome(session, clinic_id, payment)
+
+
+async def _attach_patient_nome(
+    session: AsyncSession, clinic_id: uuid.UUID | str, payment: Payment
+) -> Payment:
+    payment.patient_nome = None
+    if payment.patient_id:
+        patient = await patients_repo.get_by_id(session, clinic_id, payment.patient_id)
+        payment.patient_nome = patient.nome if patient else None
+    return payment
 
 
 async def list_payments(
     session: AsyncSession, clinic_id: uuid.UUID | str
 ) -> list[Payment]:
-    return await repository.list_all(session, clinic_id)
+    payments = await repository.list_all(session, clinic_id)
+    if not payments:
+        return payments
+    patients = {p.id: p.nome for p in await patients_repo.list_all(session, clinic_id)}
+    for p in payments:
+        p.patient_nome = patients.get(p.patient_id) if p.patient_id else None
+    return payments
 
 
 async def get_payment(
@@ -81,7 +99,7 @@ async def get_payment(
     payment = await repository.get_by_id(session, clinic_id, payment_id)
     if payment is None:
         raise NotFound("Pagamento não encontrado")
-    return payment
+    return await _attach_patient_nome(session, clinic_id, payment)
 
 
 async def refresh_status(
