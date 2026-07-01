@@ -2,6 +2,9 @@ import { Bell, Building2, Clock, Plug, Users } from "lucide-react";
 import { useState } from "react";
 
 import { useAuthStore } from "@/lib/auth-store";
+import { ClinicSection } from "@/features/clinic/clinic-section";
+import { HoursSection } from "@/features/clinic/hours-section";
+import { PreferencesSection } from "@/features/clinic/preferences-section";
 import { IntegrationsSection } from "@/features/integrations/integrations-section";
 import { UsersSection } from "@/features/users/users-section";
 
@@ -9,10 +12,10 @@ type SectionId = "users" | "clinic" | "hours" | "integrations" | "preferences";
 
 const SECTIONS: { id: SectionId; label: string; icon: typeof Users; ready: boolean }[] = [
   { id: "users", label: "Usuários", icon: Users, ready: true },
-  { id: "clinic", label: "Dados da clínica", icon: Building2, ready: false },
-  { id: "hours", label: "Horários", icon: Clock, ready: false },
+  { id: "clinic", label: "Dados da clínica", icon: Building2, ready: true },
+  { id: "hours", label: "Horários", icon: Clock, ready: true },
   { id: "integrations", label: "Integrações", icon: Plug, ready: true },
-  { id: "preferences", label: "Preferências", icon: Bell, ready: false },
+  { id: "preferences", label: "Preferências", icon: Bell, ready: true },
 ];
 
 export function ConfigPage() {
@@ -84,13 +87,38 @@ export function ConfigPage() {
               />
             ))}
 
-          {active !== "users" && active !== "integrations" && (
-            <Placeholder
-              icon={SECTIONS.find((s) => s.id === active)!.icon}
-              title={SECTIONS.find((s) => s.id === active)!.label}
-              text="Esta seção está em construção e chega em breve."
-            />
-          )}
+          {active === "clinic" &&
+            (isOwner ? (
+              <ClinicSection />
+            ) : (
+              <Placeholder
+                icon={Building2}
+                title="Apenas administradores"
+                text="Os dados da clínica são configurados por administradores."
+              />
+            ))}
+
+          {active === "hours" &&
+            (isOwner ? (
+              <HoursSection />
+            ) : (
+              <Placeholder
+                icon={Clock}
+                title="Apenas administradores"
+                text="Os horários de funcionamento são configurados por administradores."
+              />
+            ))}
+
+          {active === "preferences" &&
+            (isOwner ? (
+              <PreferencesSection />
+            ) : (
+              <Placeholder
+                icon={Bell}
+                title="Apenas administradores"
+                text="As preferências da clínica são configuradas por administradores."
+              />
+            ))}
         </div>
       </div>
     </div>
