@@ -12,6 +12,10 @@ venv/
 .env
 *.local
 
+# Backup local de senhas/segredos — NUNCA commitar
+SENHAS-PRIVADAS.txt
+*-PRIVADO.txt
+
 # uv
 # (uv.lock IS committed)
 
