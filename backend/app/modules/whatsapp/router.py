@@ -7,6 +7,7 @@
 - POST/GET /ai/whatsapp/numbers -> a clínica registra/lista seu phone_number_id.
 """
 
+import json
 import logging
 
 from fastapi import APIRouter, BackgroundTasks, Depends, Query, Request, Response, status
@@ -52,7 +53,15 @@ async def verify_webhook(
 @router.post("/webhook")
 async def receive_webhook(request: Request, background_tasks: BackgroundTasks):
     """Recebe eventos da Meta. Responde 200 imediatamente; processa em background."""
-    payload = await request.json()
+    raw = await request.body()
+    # Autenticidade: só a Meta (que conhece o App Secret) consegue assinar. Sem
+    # isso, qualquer um forja mensagens e dirige o WhatsApp/Gemini reais da clínica.
+    if not MetaWhatsAppChannel.verify_signature(
+        settings.whatsapp_app_secret, raw, request.headers.get("X-Hub-Signature-256")
+    ):
+        logger.warning("Webhook da Meta com assinatura inválida; ignorado.")
+        return Response(status_code=status.HTTP_403_FORBIDDEN)
+    payload = json.loads(raw) if raw else {}
     for msg in MetaWhatsAppChannel.parse_messages(payload):
         clinic_id = await repository.resolve_clinic_for_number(msg.phone_number_id)
         if clinic_id is None:

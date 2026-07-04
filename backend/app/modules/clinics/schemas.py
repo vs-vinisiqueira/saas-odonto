@@ -52,6 +52,9 @@ class ClinicConfig(BaseModel):
     """Estrutura completa de `clinics.config` (JSONB). Cada seção da tela de
     Configurações grava a sua própria chave; o service faz merge raso."""
 
+    # Fuso da clínica (IANA, ex.: "America/Sao_Paulo"). Interpreta os horários de
+    # funcionamento e os agendamentos. Ausente => America/Sao_Paulo (produto BR).
+    timezone: str | None = None
     clinic_data: ClinicDataConfig | None = None
     working_hours: WorkingHoursConfig | None = None
     preferences: PreferencesConfig | None = None

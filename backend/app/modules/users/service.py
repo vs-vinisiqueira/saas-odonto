@@ -3,6 +3,7 @@ import uuid
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.security import hash_password
+from app.modules.auth import refresh_repository as refresh_repo
 from app.modules.auth.models import User
 from app.modules.auth.repository import find_user_for_auth
 from app.modules.users import repository
@@ -83,3 +84,5 @@ async def reset_password(
     user = await get_user(session, clinic_id, user_id)
     user.password_hash = hash_password(data.password)
     await session.flush()
+    # Senha trocada => derruba todas as sessões existentes do usuário.
+    await refresh_repo.revoke_all_for_user(session, user_id)

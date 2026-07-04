@@ -34,6 +34,12 @@ class Settings(BaseSettings):
     # CORS: lista separada por vírgula. Em produção, inclua só os domínios reais.
     allowed_origins: str = "http://localhost:5173"
 
+    # Redis para o rate limiter compartilhado entre instâncias (produção
+    # horizontal). Opcional: se ausente, o rate limiter roda 100% in-memory
+    # por processo (comportamento atual, usado em dev/CI/single-instance).
+    # Aceita redis:// ou rediss:// (TLS). Ver core/ratelimit.py.
+    redis_url: str | None = None
+
     @field_validator("jwt_secret")
     @classmethod
     def jwt_secret_must_be_strong(cls, v: str, info) -> str:
@@ -62,12 +68,22 @@ class Settings(BaseSettings):
     whatsapp_phone_number_id: str | None = None
     whatsapp_verify_token: str | None = None
     whatsapp_api_version: str = "v21.0"
+    # App Secret do app da Meta: valida a assinatura X-Hub-Signature-256 das
+    # mensagens recebidas. Quando definido, o webhook REJEITA payloads sem
+    # assinatura válida. Se ausente, a verificação é pulada (compat) — defina em
+    # produção. NÃO é o mesmo que whatsapp_verify_token (esse é só do GET de setup).
+    whatsapp_app_secret: str | None = None
 
     # Gateway de pagamento. "mock" (default) ou "mercadopago".
     billing_provider: str = "mock"
     mercadopago_access_token: str | None = None
     # E-mail do pagador exigido pelo Pix (use um de teste no sandbox).
     mercadopago_payer_email: str = "test_user@testuser.com"
+    # Segredo da assinatura do webhook do Mercado Pago (Suas integrações ->
+    # Webhooks -> "Chave secreta"). Quando definido, o webhook valida o header
+    # x-signature (HMAC) antes de confiar no evento. Se ausente, a verificação é
+    # pulada (compat) — defina em produção.
+    mercadopago_webhook_secret: str | None = None
 
     # Calendário externo. "null" (default, no-op) ou "google" (Service Account).
     calendar_provider: str = "null"

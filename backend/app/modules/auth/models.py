@@ -1,6 +1,7 @@
+import datetime as dt
 import uuid
 
-from sqlalchemy import Boolean, ForeignKey, String, UniqueConstraint
+from sqlalchemy import Boolean, DateTime, ForeignKey, String, UniqueConstraint, func
 from sqlalchemy.dialects.postgresql import UUID as PG_UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -33,3 +34,29 @@ class User(UUIDPKMixin, TimestampMixin, Base):
     # Perfil (preenchido pela tela de Configurações > Usuários).
     nome: Mapped[str | None] = mapped_column(String(255), nullable=True)
     telefone: Mapped[str | None] = mapped_column(String(32), nullable=True)
+
+
+class RefreshToken(Base):
+    """Registro de um refresh token emitido (identificado pelo claim `jti`).
+
+    Sem RLS: o refresh é pré-tenant (ver migration 0013). Permite rotação,
+    revogação (logout/reset de senha) e detecção de reuso.
+    """
+
+    __tablename__ = "refresh_tokens"
+
+    jti: Mapped[uuid.UUID] = mapped_column(PG_UUID(as_uuid=True), primary_key=True)
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        PG_UUID(as_uuid=True),
+        ForeignKey("users.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    clinic_id: Mapped[uuid.UUID] = mapped_column(PG_UUID(as_uuid=True), nullable=False)
+    revoked: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=False, server_default="false"
+    )
+    expires_at: Mapped[dt.datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    created_at: Mapped[dt.datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )

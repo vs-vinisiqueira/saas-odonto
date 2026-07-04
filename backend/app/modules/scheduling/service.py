@@ -8,8 +8,10 @@ tools. Toda escrita também é empurrada para o calendário externo via o port
 import datetime as dt
 import logging
 import uuid
+from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.modules.auth.models import User
@@ -29,19 +31,48 @@ from app.modules.scheduling.models import (
 from app.modules.scheduling.schemas import AppointmentCreate, AppointmentUpdate
 from app.shared.exceptions import Conflict, NotFound
 
-# Janela de atendimento (UTC) e granularidade padrão dos slots. Simplificação:
-# o fuso local da clínica e os dias de funcionamento entram numa fase futura.
+# Janela de atendimento padrão e granularidade dos slots. Os horários de
+# funcionamento ("09:00" etc.) são interpretados no FUSO da clínica (config
+# `timezone`), não em UTC — ver `_clinic_tz`/`buscar_horarios`.
 WORK_START_HOUR = 9
 WORK_END_HOUR = 18
 DEFAULT_SLOT_MIN = 30
 
 UTC = dt.timezone.utc
+# Produto BR: sem `timezone` na config, assume-se o horário de Brasília.
+DEFAULT_TZ = "America/Sao_Paulo"
 
 # Chave de dia da semana usada em `clinics.config["working_hours"]`, alinhada
 # com `date.weekday()` (0=segunda).
 WEEKDAY_KEYS = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"]
 
 logger = logging.getLogger("scheduling.service")
+
+
+def _clinic_tz(config: dict | None) -> dt.tzinfo:
+    """Fuso da clínica a partir do config (default America/Sao_Paulo).
+
+    Um valor inválido cai no default; se nem o default resolver (base de fusos
+    ausente), cai em UTC — nunca estoura, a agenda sempre tem um fuso.
+    """
+    name = (config or {}).get("timezone") or DEFAULT_TZ
+    try:
+        return ZoneInfo(name)
+    except (ZoneInfoNotFoundError, ValueError):
+        pass
+    try:
+        return ZoneInfo(DEFAULT_TZ)
+    except (ZoneInfoNotFoundError, ValueError):
+        logger.warning("Base de fusos indisponível; usando UTC para a agenda.")
+        return UTC
+
+
+async def clinic_timezone(
+    session: AsyncSession, clinic_id: uuid.UUID | str
+) -> dt.tzinfo:
+    """Fuso da clínica (para formatar/interpretar horários fora do service)."""
+    clinic = await clinics_repo.get_by_id(session, clinic_id)
+    return _clinic_tz(clinic.config if clinic else None)
 
 
 async def _calendar_for_clinic(
@@ -126,20 +157,18 @@ def _parse_hhmm(value: str | None, default: dt.time) -> dt.time:
         return default
 
 
-async def _working_hours_for_day(
-    session: AsyncSession, clinic_id: uuid.UUID | str, day: dt.date
-) -> dict | None:
-    """Janela de atendimento da clínica no dia, lendo `clinics.config.working_hours`.
+def _working_hours_for_day(config: dict | None, day: dt.date) -> dict | None:
+    """Janela de atendimento da clínica no dia, lendo `config.working_hours`.
 
     Sem configuração (clínica ainda não usou a tela de Horários): cai no
     fallback fixo 09-18h (compatibilidade com clínicas já em uso). Retorna
-    `None` quando o dia está marcado como fechado (sem slots).
+    `None` quando o dia está marcado como fechado (sem slots). Os horários são
+    `dt.time` "ingênuos" — o fuso é aplicado por quem monta os datetimes.
     """
     default_start = dt.time(WORK_START_HOUR)
     default_end = dt.time(WORK_END_HOUR)
 
-    clinic = await clinics_repo.get_by_id(session, clinic_id)
-    working_hours = (clinic.config or {}).get("working_hours") if clinic else None
+    working_hours = (config or {}).get("working_hours")
     if not working_hours:
         return {"start": default_start, "end": default_end, "lunch_start": None, "lunch_end": None}
 
@@ -165,19 +194,27 @@ async def buscar_horarios(
     slot_min: int = DEFAULT_SLOT_MIN,
     now: dt.datetime | None = None,
 ) -> list[dict]:
-    """Lista os horários livres de um dia (slots de `slot_min` minutos)."""
-    hours = await _working_hours_for_day(session, clinic_id, day)
+    """Lista os horários livres de um dia (slots de `slot_min` minutos).
+
+    Os horários de funcionamento são interpretados no fuso da clínica e
+    convertidos para UTC — os slots retornados são instantes UTC tz-aware.
+    """
+    clinic = await clinics_repo.get_by_id(session, clinic_id)
+    config = clinic.config if clinic else None
+    tz = _clinic_tz(config)
+
+    hours = _working_hours_for_day(config, day)
     if hours is None:
         return []  # clínica fechada nesse dia da semana
 
-    day_start = dt.datetime.combine(day, hours["start"], tzinfo=UTC)
-    day_end = dt.datetime.combine(day, hours["end"], tzinfo=UTC)
-    lunch_start = (
-        dt.datetime.combine(day, hours["lunch_start"], tzinfo=UTC) if hours["lunch_start"] else None
-    )
-    lunch_end = (
-        dt.datetime.combine(day, hours["lunch_end"], tzinfo=UTC) if hours["lunch_end"] else None
-    )
+    def _at(t: dt.time | None) -> dt.datetime | None:
+        # Combina data+hora no fuso da clínica e converte para UTC.
+        return dt.datetime.combine(day, t, tzinfo=tz).astimezone(UTC) if t else None
+
+    day_start = _at(hours["start"])
+    day_end = _at(hours["end"])
+    lunch_start = _at(hours["lunch_start"])
+    lunch_end = _at(hours["lunch_end"])
     now = now or dt.datetime.now(UTC)
 
     busy = await repository.list_in_range(
@@ -211,6 +248,10 @@ async def agendar(
     starts_at = _ensure_utc(data.starts_at)
     ends_at = starts_at + dt.timedelta(minutes=data.duration_min)
 
+    # Nunca agendar no passado (vale para todos os caminhos: painel e agente).
+    if starts_at < dt.datetime.now(UTC):
+        raise ConflictError("Não é possível agendar em um horário no passado")
+
     await _validate_patient(session, clinic_id, data.patient_id)
     await _validate_dentist(session, data.dentist_id)
     _validate_tipo(data.tipo)
@@ -230,7 +271,14 @@ async def agendar(
         tipo=data.tipo,
         notes=data.notes,
     )
-    await repository.add(session, appointment)
+    # find_conflict acima é o caminho rápido; a constraint EXCLUDE (migration 0012)
+    # é o backstop contra a race de dois agendamentos simultâneos. O savepoint
+    # mantém a transação externa utilizável se a constraint disparar.
+    try:
+        async with session.begin_nested():
+            await repository.add(session, appointment)
+    except IntegrityError:
+        raise ConflictError()
     await calendar.upsert_event(appointment)
     return await _attach_patient_nome(session, clinic_id, appointment)
 
@@ -327,7 +375,11 @@ async def update_appointment(
         appt.starts_at = new_start
         appt.ends_at = new_end
 
-    await session.flush()
+    try:
+        async with session.begin_nested():
+            await session.flush()
+    except IntegrityError:
+        raise ConflictError()
     if appt.status == STATUS_CANCELLED:
         await calendar.delete_event(appt)
     else:

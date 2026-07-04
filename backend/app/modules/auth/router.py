@@ -16,8 +16,16 @@ _LOGIN_WINDOW = 60
 
 
 def _client_ip(request: Request) -> str:
+    # Atrás do proxy do Railway o X-Forwarded-For tem o formato
+    # "<cliente>, <proxies...>"; o proxy confiável ACRESCENTA o IP real à direita.
+    # Pegar o valor mais à DIREITA evita o spoof trivial de injetar entradas falsas
+    # à esquerda (cada request cairia numa chave diferente, furando o rate limit).
     forwarded = request.headers.get("x-forwarded-for")
-    return forwarded.split(",")[0].strip() if forwarded else (request.client.host or "unknown")
+    if forwarded:
+        parts = [p.strip() for p in forwarded.split(",") if p.strip()]
+        if parts:
+            return parts[-1]
+    return (request.client.host if request.client else None) or "unknown"
 
 
 @router.post("/login", response_model=TokenResponse)
@@ -27,7 +35,7 @@ async def login(
     session: AsyncSession = Depends(get_session),
 ):
     ip = _client_ip(request)
-    if not is_allowed(f"login:{ip}", limit=_LOGIN_LIMIT, window_seconds=_LOGIN_WINDOW):
+    if not await is_allowed(f"login:{ip}", limit=_LOGIN_LIMIT, window_seconds=_LOGIN_WINDOW):
         login_rate_limited(ip)
         return JSONResponse(
             status_code=status.HTTP_429_TOO_MANY_REQUESTS,
@@ -44,13 +52,26 @@ async def login(
 
 
 @router.post("/refresh", response_model=TokenResponse)
-async def refresh(request: Request, body: RefreshRequest):
+async def refresh(
+    request: Request,
+    body: RefreshRequest,
+    session: AsyncSession = Depends(get_session),
+):
     ip = _client_ip(request)
-    if not is_allowed(f"refresh:{ip}", limit=10, window_seconds=60):
+    if not await is_allowed(f"refresh:{ip}", limit=10, window_seconds=60):
         login_rate_limited(ip)
         return JSONResponse(
             status_code=status.HTTP_429_TOO_MANY_REQUESTS,
             content={"detail": "Muitas tentativas. Tente novamente em 1 minuto."},
             headers={"Retry-After": "60"},
         )
-    return await service.refresh_tokens(body.refresh_token)
+    return await service.refresh_tokens(session, body.refresh_token)
+
+
+@router.post("/logout", status_code=status.HTTP_204_NO_CONTENT)
+async def logout(
+    body: RefreshRequest,
+    session: AsyncSession = Depends(get_session),
+):
+    """Logout real: revoga o refresh token no servidor (não só no cliente)."""
+    await service.logout(session, body.refresh_token)

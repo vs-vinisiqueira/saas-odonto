@@ -4,12 +4,15 @@ CRUD de cobrança é escopado por tenant (RLS). O webhook do provedor chega sem
 JWT e localiza a clínica pelo charge_id (ver service.handle_webhook).
 """
 
+import hashlib
+import hmac
 import logging
 import uuid
 
-from fastapi import APIRouter, Depends, Request, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.config import settings
 from app.core.tenant import get_tenant_session
 from app.modules.auth.deps import CurrentUser, get_current_user
 from app.modules.billing import service
@@ -18,6 +21,29 @@ from app.modules.billing.schemas import ChargeCreate, GatewayWebhook, PaymentOut
 logger = logging.getLogger("billing.router")
 
 router = APIRouter(prefix="/billing", tags=["billing"])
+
+
+def _verify_mercadopago_signature(request: Request, data_id: str) -> bool:
+    """Valida o header `x-signature` do Mercado Pago (HMAC-SHA256).
+
+    Template do manifesto (docs do MP): `id:<data.id>;request-id:<x-request-id>;ts:<ts>;`.
+    Retorna True quando não há segredo configurado (verificação desligada, compat).
+    """
+    secret = settings.mercadopago_webhook_secret
+    if not secret:
+        return True
+    sig = request.headers.get("x-signature") or ""
+    parts = dict(
+        p.strip().split("=", 1) for p in sig.split(",") if "=" in p
+    )
+    ts, v1 = parts.get("ts"), parts.get("v1")
+    if not ts or not v1:
+        return False
+    request_id = request.headers.get("x-request-id", "")
+    # data.id alfanumérico deve ir em minúsculas no manifesto (regra do MP).
+    manifest = f"id:{data_id.lower()};request-id:{request_id};ts:{ts};"
+    expected = hmac.new(secret.encode(), manifest.encode(), hashlib.sha256).hexdigest()
+    return hmac.compare_digest(v1, expected)
 
 
 @router.post(
@@ -69,7 +95,14 @@ async def refresh_charge(
 @router.post("/webhook", status_code=status.HTTP_200_OK)
 async def gateway_webhook(payload: GatewayWebhook):
     """Notificação genérica (mock/teste): recebe {charge_id, status} direto.
-    Responde 200 mesmo para charge_id desconhecido (padrão de webhooks)."""
+    Responde 200 mesmo para charge_id desconhecido (padrão de webhooks).
+
+    SEM autenticação nem assinatura: quem souber um charge_id conseguiria marcar
+    a cobrança como paga sem pagar. Por isso só existe em dev/CI. Em produção, a
+    confirmação vem pelo webhook do provedor real (/billing/mercadopago/webhook),
+    que reconsulta o status na API do gateway."""
+    if settings.environment == "production":
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)
     ok = await service.handle_webhook(payload.charge_id, payload.status)
     return {"ok": ok}
 
@@ -101,6 +134,11 @@ async def mercadopago_webhook(request: Request):
         )
 
     if not payment_id:
+        return {"ok": False}
+
+    # Autenticidade: só o Mercado Pago (que conhece a chave secreta) assina.
+    if not _verify_mercadopago_signature(request, payment_id):
+        logger.warning("Webhook do Mercado Pago com assinatura inválida; ignorado.")
         return {"ok": False}
 
     try:
