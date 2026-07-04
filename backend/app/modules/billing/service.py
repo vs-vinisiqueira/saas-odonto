@@ -17,7 +17,7 @@ from app.core.tenant import open_tenant_session
 from app.modules.billing import repository
 from app.modules.billing.factory import get_payment_gateway
 from app.modules.billing.gateway import PaymentGateway
-from app.modules.billing.models import PAYMENT_STATUSES, Payment
+from app.modules.billing.models import PAYMENT_STATUSES, STATUS_PAID, Payment
 from app.modules.billing.schemas import ChargeCreate
 from app.modules.patients import repository as patients_repo
 from app.shared.exceptions import Conflict, NotFound
@@ -148,6 +148,18 @@ async def handle_webhook(charge_id: str, status: str) -> bool:
         payment = await repository.get_by_charge_id(session, charge_id)
         if payment is None:
             return False
+        # Idempotência: evento repetido (mesmo status) é no-op.
+        if payment.status == status:
+            return True
+        # 'paid' é terminal: um evento atrasado/reordenado não rebaixa a cobrança.
+        if payment.status == STATUS_PAID:
+            logger.info(
+                "Webhook ignorado: cobrança %s já paga (evento %s)", charge_id, status
+            )
+            return True
+        logger.info(
+            "Cobrança %s: status %s -> %s", charge_id, payment.status, status
+        )
         payment.status = status
         await session.flush()
     return True

@@ -27,5 +27,15 @@ services:
     ports:
       - "8000:8000"
 
+  # Opcional: só usado pelo rate limiter quando REDIS_URL está setada no seu
+  # .env (senão o rate limiter roda in-memory, como sempre). Não conectado ao
+  # `api` por padrão — para testar o caminho Redis localmente, adicione ao seu
+  # .env: REDIS_URL=redis://redis:6379/0
+  redis:
+    image: redis:7-alpine
+    container_name: saas_odonto_redis
+    ports:
+      - "6379:6379"
+
 volumes:
   pgdata:

@@ -24,6 +24,7 @@ def _create_token(
     role: str,
     expires_delta: dt.timedelta,
     token_type: str,
+    jti: str | uuid.UUID | None = None,
 ) -> str:
     now = dt.datetime.now(dt.timezone.utc)
     payload = {
@@ -34,6 +35,10 @@ def _create_token(
         "iat": now,
         "exp": now + expires_delta,
     }
+    # `jti` (identificador único do token) só nos refresh tokens: é a chave para
+    # rotação/revogação na tabela refresh_tokens.
+    if jti is not None:
+        payload["jti"] = str(jti)
     return jwt.encode(payload, settings.jwt_secret, algorithm=settings.jwt_algorithm)
 
 
@@ -44,10 +49,10 @@ def create_access_token(subject, clinic_id, role) -> str:
     )
 
 
-def create_refresh_token(subject, clinic_id, role) -> str:
+def create_refresh_token(subject, clinic_id, role, jti) -> str:
     return _create_token(
         subject, clinic_id, role,
-        dt.timedelta(days=settings.refresh_token_expire_days), "refresh",
+        dt.timedelta(days=settings.refresh_token_expire_days), "refresh", jti=jti,
     )
 
 

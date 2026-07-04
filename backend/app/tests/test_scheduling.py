@@ -39,6 +39,10 @@ async def test_availability_and_booking_flow(client, make_clinic_with_owner):
     owner = await make_clinic_with_owner(password_hash=hash_password(password))
     h = await _login(client, owner["email"], password)
 
+    # Fixa o fuso em UTC para casar com os timestamps "Z" deste teste (os horários
+    # de funcionamento são interpretados no fuso da clínica).
+    await client.patch("/clinics/me", headers=h, json={"config": {"timezone": "UTC"}})
+
     pr = await client.post(
         "/patients", headers=h, json={"nome": "João", "telefone": "+5511988887777"}
     )
@@ -124,6 +128,9 @@ async def test_working_hours_from_clinic_config(client, make_clinic_with_owner):
     password = "segredo123"
     owner = await make_clinic_with_owner(password_hash=hash_password(password))
     h = await _login(client, owner["email"], password)
+
+    # Fuso UTC para que "09:00–12:00" caiam nas horas UTC que o teste assere.
+    await client.patch("/clinics/me", headers=h, json={"config": {"timezone": "UTC"}})
 
     r = await client.patch(
         "/clinics/me",

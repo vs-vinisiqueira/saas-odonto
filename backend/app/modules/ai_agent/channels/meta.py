@@ -8,6 +8,8 @@ router, via `whatsapp.repository.resolve_clinic_for_number`.
 
 from __future__ import annotations
 
+import hashlib
+import hmac
 import logging
 from dataclasses import dataclass
 
@@ -76,6 +78,28 @@ class MetaWhatsAppChannel(WhatsAppChannel):
         mode: str | None, token: str | None, challenge: str | None, expected: str | None
     ) -> str | None:
         """Retorna o challenge (a ecoar) se a verificação do webhook bater."""
-        if mode == "subscribe" and expected and token == expected:
+        if (
+            mode == "subscribe"
+            and expected
+            and token
+            and hmac.compare_digest(token, expected)
+        ):
             return challenge
         return None
+
+    @staticmethod
+    def verify_signature(
+        app_secret: str | None, raw_body: bytes, signature_header: str | None
+    ) -> bool:
+        """Confere o X-Hub-Signature-256 (HMAC-SHA256 do corpo cru com o App Secret).
+
+        Retorna True quando não há `app_secret` configurado (verificação desligada,
+        compat). Quando há, exige uma assinatura `sha256=<hex>` válida — comparação
+        em tempo constante para não vazar timing.
+        """
+        if not app_secret:
+            return True
+        if not signature_header or not signature_header.startswith("sha256="):
+            return False
+        expected = hmac.new(app_secret.encode(), raw_body, hashlib.sha256).hexdigest()
+        return hmac.compare_digest(signature_header[len("sha256="):], expected)

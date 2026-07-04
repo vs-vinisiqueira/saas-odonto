@@ -27,7 +27,10 @@ jobs:
           --health-retries 10
 
     env:
-      DATABASE_URL: postgresql+asyncpg://postgres:postgres@localhost:5432/saas_odonto_test
+      # A app conecta como app_user (NÃO dono das tabelas) — igual à produção
+      # (Neon). Dono de tabela bypassa RLS: com DATABASE_URL=postgres, os testes
+      # de isolamento multi-tenant falham (era o motivo do CI vermelho na main).
+      DATABASE_URL: postgresql+asyncpg://app_user:app_password@localhost:5432/saas_odonto_test
       ADMIN_DATABASE_URL: postgresql+asyncpg://postgres:postgres@localhost:5432/saas_odonto_test
       JWT_SECRET: ci-test-secret-not-used-in-production-32x
 

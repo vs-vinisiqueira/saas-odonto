@@ -50,22 +50,24 @@ TOOL_SPECS: list[dict] = [
 ]
 
 
-def _fmt_hm(value: dt.datetime) -> str:
-    return value.astimezone(UTC).strftime("%H:%M")
+def _fmt_hm(value: dt.datetime, tz: dt.tzinfo) -> str:
+    return value.astimezone(tz).strftime("%H:%M")
 
 
 async def _buscar_horarios(session, clinic_id, patient, args) -> str:
+    tz = await scheduling.clinic_timezone(session, clinic_id)
     raw = args.get("date")
     if raw:
         day = dt.date.fromisoformat(raw)
     else:
-        day = (dt.datetime.now(UTC) + dt.timedelta(days=1)).date()
+        # "amanhã" no fuso da clínica, não em UTC.
+        day = (dt.datetime.now(tz) + dt.timedelta(days=1)).date()
 
     slots = await scheduling.buscar_horarios(session, clinic_id, day)
     if not slots:
         return f"Não encontrei horários livres em {day.isoformat()}. Quer tentar outro dia?"
 
-    horas = [_fmt_hm(s["starts_at"]) for s in slots]
+    horas = [_fmt_hm(s["starts_at"], tz) for s in slots]
     mostrados = ", ".join(horas[:8])
     extra = f" (e mais {len(horas) - 8})" if len(horas) > 8 else ""
     return (
@@ -76,9 +78,25 @@ async def _buscar_horarios(session, clinic_id, patient, args) -> str:
 
 
 async def _agendar(session, clinic_id, patient: Patient, args) -> str:
+    tz = await scheduling.clinic_timezone(session, clinic_id)
     starts_at = dt.datetime.fromisoformat(args["starts_at"])
+    # O paciente/LLM fala no fuso da clínica ("09:00" = 09:00 local). Um horário
+    # sem fuso é interpretado como local e convertido para UTC.
     if starts_at.tzinfo is None:
-        starts_at = starts_at.replace(tzinfo=UTC)
+        starts_at = starts_at.replace(tzinfo=tz)
+
+    # O LLM pode alucinar um horário (fora do expediente, no almoço, no passado,
+    # desalinhado da grade). Só aceitamos um instante que é slot livre de verdade.
+    starts_utc = starts_at.astimezone(UTC)
+    slots = await scheduling.buscar_horarios(
+        session, clinic_id, starts_at.astimezone(tz).date()
+    )
+    if not any(s["starts_at"] == starts_utc for s in slots):
+        return (
+            "Esse horário está indisponível. Quer que eu mostre os horários "
+            "livres desse dia?"
+        )
+
     data = AppointmentCreate(
         patient_id=patient.id,
         starts_at=starts_at,
@@ -94,7 +112,7 @@ async def _agendar(session, clinic_id, patient: Patient, args) -> str:
     except NotFound as e:
         return f"Não consegui concluir: {e.detail}"
 
-    quando = appt.starts_at.astimezone(UTC)
+    quando = appt.starts_at.astimezone(tz)
     return (
         f"Pronto, {patient.nome}! Sua consulta está marcada para "
         f"{quando.strftime('%d/%m/%Y às %H:%M')}. Até lá! 🦷"

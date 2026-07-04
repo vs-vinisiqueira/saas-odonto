@@ -12,6 +12,7 @@ import {
 import { NavLink, Outlet, useNavigate } from "react-router-dom";
 
 import { Spinner } from "@/components/ui/spinner";
+import { logout } from "@/features/auth/api";
 import { useMyClinic } from "@/features/clinic/api";
 import { useConversations } from "@/features/conversations/api";
 import { useAuthStore } from "@/lib/auth-store";
@@ -52,7 +53,6 @@ function ThemeToggle() {
 
 export function AppShell() {
   const navigate = useNavigate();
-  const clear = useAuthStore((s) => s.clear);
   const user = useAuthStore((s) => s.user);
   const clinic = useMyClinic();
   const conversations = useConversations();
@@ -63,8 +63,8 @@ export function AppShell() {
   const userName = user?.role === "owner" ? clinicName : (user?.role ?? "Usuário");
   const userInitials = initials(userName);
 
-  function handleLogout() {
-    clear();
+  async function handleLogout() {
+    await logout();
     navigate("/login", { replace: true });
   }
 

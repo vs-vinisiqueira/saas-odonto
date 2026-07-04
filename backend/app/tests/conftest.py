@@ -29,15 +29,22 @@ def make_engine(url: str):
 
 
 @pytest.fixture(autouse=True)
-def _reset_rate_limit():
-    """O rate limiter de login é um contador in-memory por processo (5/min/IP).
-    Como toda a suíte loga do mesmo IP (127.0.0.1, ASGITransport), sem zerar entre
-    os testes o limite estoura e logins passam a dar 429. Reset garante isolamento."""
-    from app.core.ratelimit import _hits
+async def _reset_rate_limit():
+    """O rate limiter de login pode rodar in-memory (padrão, sem REDIS_URL) ou
+    via Redis. Como toda a suíte loga do mesmo IP (127.0.0.1, ASGITransport),
+    sem zerar entre os testes o limite estoura e logins passam a dar 429.
 
-    _hits.clear()
+    Reset garante isolamento no caminho in-memory (sempre) e, defensivamente,
+    fecha o client Redis a cada teste — caso um dev rode a suíte localmente com
+    REDIS_URL definida, evita reusar uma conexão presa ao event loop do teste
+    anterior (mesmo problema do engine SQLAlchemy, ver `_dispose_app_engine`
+    abaixo). Na suíte padrão (sem REDIS_URL), o dispose é um no-op."""
+    from app.core import ratelimit
+
+    ratelimit._hits.clear()
     yield
-    _hits.clear()
+    ratelimit._hits.clear()
+    await ratelimit._dispose_redis()
 
 
 @pytest.fixture(autouse=True)

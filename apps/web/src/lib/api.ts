@@ -5,6 +5,7 @@ import axios, {
 } from "axios";
 
 import { useAuthStore, type TokenResponse } from "./auth-store";
+import { queryClient } from "./query";
 
 const BASE_URL = (import.meta.env.VITE_API_URL as string | undefined) ?? "/api";
 
@@ -63,6 +64,7 @@ api.interceptors.response.use(
         return api(original);
       } catch {
         useAuthStore.getState().clear();
+        queryClient.clear();
       }
     }
     return Promise.reject(error);

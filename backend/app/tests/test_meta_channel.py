@@ -2,6 +2,9 @@
 challenge e montagem da requisição de envio (httpx mockado).
 """
 
+import hashlib
+import hmac
+
 import pytest
 
 from app.modules.ai_agent.channels.meta import MetaWhatsAppChannel
@@ -75,6 +78,33 @@ async def test_verify_challenge():
         is None
     )
     assert MetaWhatsAppChannel.verify_challenge("subscribe", "x", "123", None) is None
+
+
+def test_verify_signature_sem_secret_libera():
+    # Compat: sem App Secret configurado, a verificação é pulada (aceita tudo).
+    assert MetaWhatsAppChannel.verify_signature(None, b'{"a":1}', None) is True
+    assert MetaWhatsAppChannel.verify_signature("", b'{"a":1}', "sha256=deadbeef") is True
+
+
+def test_verify_signature_valida_assinatura_correta():
+    secret = "app-secret-da-meta"
+    body = b'{"object":"whatsapp_business_account"}'
+    digest = hmac.new(secret.encode(), body, hashlib.sha256).hexdigest()
+    assert MetaWhatsAppChannel.verify_signature(secret, body, f"sha256={digest}") is True
+
+
+def test_verify_signature_rejeita_invalida_ausente_ou_corpo_adulterado():
+    secret = "app-secret-da-meta"
+    body = b'{"object":"whatsapp_business_account"}'
+    digest = hmac.new(secret.encode(), body, hashlib.sha256).hexdigest()
+
+    # Assinatura correta para OUTRO corpo => rejeita (corpo adulterado).
+    assert MetaWhatsAppChannel.verify_signature(secret, b'{"x":9}', f"sha256={digest}") is False
+    # Header ausente ou sem o prefixo sha256= => rejeita.
+    assert MetaWhatsAppChannel.verify_signature(secret, body, None) is False
+    assert MetaWhatsAppChannel.verify_signature(secret, body, digest) is False
+    # Hex inválido => rejeita.
+    assert MetaWhatsAppChannel.verify_signature(secret, body, "sha256=nope") is False
 
 
 @pytest.mark.asyncio
