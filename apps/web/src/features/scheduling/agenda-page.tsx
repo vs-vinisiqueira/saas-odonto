@@ -293,7 +293,7 @@ function WeekGrid({
                                 {st.label}
                               </div>
                             </div>
-                            <div className="mt-0.5 truncate text-xs font-semibold text-foreground">
+                            <div className="mt-0.5 truncate text-xs font-semibold" style={{ color: "#27272A" }}>
                               {patientName(appt)}
                             </div>
                           </div>
@@ -373,11 +373,11 @@ function DayGrid({
                             style={{ background: (TIPO_INFO[appt.tipo] ?? TIPO_INFO.avaliacao).color }}
                           />
                           <div className="text-[10px] font-extrabold uppercase tracking-[.04em]" style={{ color: st.color }}>{st.label}</div>
-                          <span className="text-[10px] font-semibold text-muted-foreground">
+                          <span className="text-[10px] font-semibold" style={{ color: "#71717A" }}>
                             · {(TIPO_INFO[appt.tipo] ?? TIPO_INFO.avaliacao).label}
                           </span>
                         </div>
-                        <div className="mt-0.5 text-[15px] font-bold text-foreground">{patientName(appt)}</div>
+                        <div className="mt-0.5 text-[15px] font-bold" style={{ color: "#27272A" }}>{patientName(appt)}</div>
                       </div>
                       <div
                         className="flex shrink-0 items-center gap-1"
