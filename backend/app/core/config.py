@@ -19,6 +19,18 @@ class Settings(BaseSettings):
     # Conexão admin (superusuário) usada por migrations e seed. Opcional em runtime.
     admin_database_url: str | None = None
 
+    # Pool de conexões do SQLAlchemy (por PROCESSO uvicorn). Defaults conservadores
+    # para uma clínica grande num único processo; se rodar com múltiplos workers ou
+    # réplicas, dimensione `db_pool_size * (workers|réplicas)` ABAIXO do limite do
+    # endpoint Neon. Atrás do pooler (PgBouncer), `pool_recycle` evita reter
+    # conexões mortas por muito tempo. Ver core/database.py.
+    db_pool_size: int = 10
+    db_max_overflow: int = 10
+    # Segundos que uma requisição espera por uma conexão livre antes de estourar.
+    db_pool_timeout: int = 30
+    # Segundos até reciclar uma conexão ociosa (< idle timeout do pooler do Neon).
+    db_pool_recycle: int = 1800
+
     # JWT
     jwt_secret: str = _WEAK_SECRET
     jwt_algorithm: str = "HS256"
