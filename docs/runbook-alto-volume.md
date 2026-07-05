@@ -20,8 +20,8 @@ Legenda: **[código]** = já no PR desta branch · **[painel]** = ação sua no 
 Já mergeado. `DB_POOL_SIZE=10, DB_MAX_OVERFLOW=10, DB_POOL_TIMEOUT=30, DB_POOL_RECYCLE=1800`.
 - **Verificar (após deploy):**
   ```bash
-  # engine sobe com o pool correto (sem conectar):
-  DATABASE_URL=postgresql+asyncpg://u:p@localhost/db \
+  # rode de dentro de backend/ (é lá que vive o pacote app e o ambiente uv):
+  cd backend && DATABASE_URL=postgresql+asyncpg://u:p@localhost/db \
     uv run python -c "from app.core.database import engine as e; \
     print(e.pool.size(), e.pool._max_overflow, e.pool._timeout, e.pool._recycle)"
   ```
