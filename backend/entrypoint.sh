@@ -15,9 +15,10 @@ fi
 
 # ── API ───────────────────────────────────────────────────────────────────────
 # Nº de workers via WEB_CONCURRENCY. Default 1 = comportamento atual (byte a byte:
-# sem a flag --workers). Aumente com CAUTELA: cada worker abre seu PRÓPRIO pool,
-# então o total de conexões é DB_POOL_SIZE * WEB_CONCURRENCY — mantenha abaixo do
-# limite do endpoint Neon. App é I/O-bound (async), então poucos workers já saturam.
+# sem a flag --workers). Aumente com CAUTELA: cada worker abre seu PRÓPRIO pool e
+# pode dar burst até (DB_POOL_SIZE + DB_MAX_OVERFLOW) conexões, então o teto real é
+# (DB_POOL_SIZE + DB_MAX_OVERFLOW) * WEB_CONCURRENCY — mantenha abaixo do limite do
+# endpoint Neon. App é I/O-bound (async), então poucos workers já saturam.
 PORT="${PORT:-8000}"
 WORKERS="${WEB_CONCURRENCY:-1}"
 if [ "${WORKERS}" -gt 1 ] 2>/dev/null; then

@@ -16,8 +16,8 @@ IMPORTANTE:
 
 Requisitos: Python 3.11+, httpx (já é dependência do backend).
 
-Exemplo:
-    python scripts/loadtest/booking_race.py \
+Exemplo (o httpx vive no ambiente uv do backend/, então rode de dentro de backend/):
+    cd backend && uv run python ../scripts/loadtest/booking_race.py \
         --base-url https://SEU-BACKEND.up.railway.app \
         --email admin@clinica.com --password '***' \
         --patient-id <uuid> --dentist-id <uuid> --count 50
@@ -27,13 +27,15 @@ from __future__ import annotations
 import argparse
 import asyncio
 import datetime as dt
-import statistics
 import sys
 
 try:
     import httpx
 except ImportError:  # pragma: no cover
-    sys.exit("httpx não instalado. Rode via `uv run python scripts/loadtest/booking_race.py ...`")
+    sys.exit(
+        "httpx não instalado. Rode de dentro de backend/: "
+        "`cd backend && uv run python ../scripts/loadtest/booking_race.py ...`"
+    )
 
 
 def _parse_args() -> argparse.Namespace:

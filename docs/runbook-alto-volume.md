@@ -70,7 +70,8 @@ Definir no Railway (pendentes por checklist do projeto): `CREDENTIALS_SECRET` (f
 ### P0.6 · Teste de carga do slot único → 409 — **[código] (script novo neste PR)**
 - **Fazer (contra STAGING, com paciente/dentista de teste):**
   ```bash
-  uv run python scripts/loadtest/booking_race.py \
+  # o httpx vive no ambiente uv do backend/, então rode de dentro de backend/:
+  cd backend && uv run python ../scripts/loadtest/booking_race.py \
     --base-url $STAGING --email <e> --password <s> \
     --patient-id <uuid> --dentist-id <uuid> --count 50
   ```
@@ -84,7 +85,10 @@ Definir no Railway (pendentes por checklist do projeto): `CREDENTIALS_SECRET` (f
 `entrypoint.sh` agora aceita `WEB_CONCURRENCY` (default 1 = inalterado). App é I/O-bound (async);
 comece com **1 processo** e escale por **réplicas** (melhor isolamento + rolling deploy).
 - ⚠️ Se **> 1 worker ou réplica**: P0.3 (Redis) vira **obrigatório** e ative P1.2 (migrations).
-- **Dimensionar:** `DB_POOL_SIZE * (WEB_CONCURRENCY × réplicas)` **abaixo** do limite do endpoint Neon.
+- **Dimensionar:** `(DB_POOL_SIZE + DB_MAX_OVERFLOW) * (WEB_CONCURRENCY × réplicas)` **abaixo** do
+  limite do endpoint Neon. O `max_overflow` conta porque cada worker pode dar burst até
+  `pool_size + max_overflow` sob pico (com os defaults 10+10, cada worker chega a **20** conexões,
+  não 10). Para uma conta exata, zere `DB_MAX_OVERFLOW`.
 - **Verificar:** `GET /health` OK em todas as réplicas; sem erro de esgotamento de pool sob carga.
 
 ### P1.2 · Migrations fora do boot das réplicas — **[código: guard neste PR] + [painel]**

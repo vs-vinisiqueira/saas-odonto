@@ -21,9 +21,10 @@ class Settings(BaseSettings):
 
     # Pool de conexões do SQLAlchemy (por PROCESSO uvicorn). Defaults conservadores
     # para uma clínica grande num único processo; se rodar com múltiplos workers ou
-    # réplicas, dimensione `db_pool_size * (workers|réplicas)` ABAIXO do limite do
-    # endpoint Neon. Atrás do pooler (PgBouncer), `pool_recycle` evita reter
-    # conexões mortas por muito tempo. Ver core/database.py.
+    # réplicas, dimensione `(db_pool_size + db_max_overflow) * (workers|réplicas)`
+    # ABAIXO do limite do endpoint Neon — cada worker pode dar burst até
+    # pool_size + max_overflow sob pico. Atrás do pooler (PgBouncer), `pool_recycle`
+    # evita reter conexões mortas por muito tempo. Ver core/database.py.
     db_pool_size: int = 10
     db_max_overflow: int = 10
     # Segundos que uma requisição espera por uma conexão livre antes de estourar.
