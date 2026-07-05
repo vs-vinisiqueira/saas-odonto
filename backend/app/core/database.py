@@ -13,8 +13,18 @@ class Base(DeclarativeBase):
 
 # Normaliza a URL para o asyncpg (SSL do Neon + pooler PgBouncer).
 _url, _connect_args = prepare_asyncpg(settings.database_url)
+# Pool explícito e tunável por env (ver Settings). `pool_pre_ping` descarta
+# conexões mortas no checkout; `pool_recycle` evita retê-las além do idle do
+# pooler do Neon; `pool_timeout` limita a espera por uma conexão sob carga.
 engine = create_async_engine(
-    _url, echo=False, pool_pre_ping=True, connect_args=_connect_args
+    _url,
+    echo=False,
+    pool_pre_ping=True,
+    pool_size=settings.db_pool_size,
+    max_overflow=settings.db_max_overflow,
+    pool_timeout=settings.db_pool_timeout,
+    pool_recycle=settings.db_pool_recycle,
+    connect_args=_connect_args,
 )
 async_session_maker = async_sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
 
