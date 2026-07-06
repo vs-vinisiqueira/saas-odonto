@@ -177,3 +177,60 @@ async def test_invalid_tipo_rejected(client, make_clinic_with_owner):
         },
     )
     assert r.status_code == 404, r.text
+
+
+@pytest.mark.asyncio
+async def test_optimistic_lock_on_concurrent_update(client, make_clinic_with_owner):
+    """Locking otimista: duas edições concorrentes da MESMA linha — a segunda
+    deve falhar com StaleDataError (que o service traduz para 409), fechando o
+    lost update. Simula a corrida com duas sessões de tenant e commit controlado."""
+    from sqlalchemy import text
+    from sqlalchemy.orm.exc import StaleDataError
+
+    from app.core.database import async_session_maker
+    from app.modules.scheduling import repository
+
+    password = "segredo123"
+    owner = await make_clinic_with_owner(password_hash=hash_password(password))
+    clinic_id = owner["clinic_id"]
+    h = await _login(client, owner["email"], password)
+
+    pr = await client.post(
+        "/patients", headers=h, json={"nome": "Bia", "telefone": "+5511966665555"}
+    )
+    patient_id = pr.json()["id"]
+    cr = await client.post(
+        "/scheduling/appointments",
+        headers=h,
+        json={"patient_id": patient_id, "starts_at": f"{DAY}T15:00:00Z", "duration_min": 30},
+    )
+    assert cr.status_code == 201, cr.text
+    appt_id = cr.json()["id"]
+
+    async def _tenant_session():
+        # Espelha app.core.tenant.open_tenant_session, mas sem auto-commit no
+        # exit — precisamos controlar a ordem (A commita antes de B dar flush).
+        s = async_session_maker()
+        await s.execute(
+            text("SELECT set_config('app.current_clinic', :c, true)"),
+            {"c": str(clinic_id)},
+        )
+        return s
+
+    s1 = await _tenant_session()
+    s2 = await _tenant_session()
+    try:
+        a1 = await repository.get_by_id(s1, clinic_id, appt_id)
+        a2 = await repository.get_by_id(s2, clinic_id, appt_id)
+        assert a1 is not None and a2 is not None
+
+        a1.notes = "editado por A"
+        await s1.commit()  # A vence: version 1 -> 2
+
+        a2.notes = "editado por B (stale)"
+        with pytest.raises(StaleDataError):
+            await s2.flush()  # UPDATE ... WHERE version=1 casa 0 linhas
+        await s2.rollback()
+    finally:
+        await s1.close()
+        await s2.close()
