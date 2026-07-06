@@ -1,7 +1,7 @@
 import datetime as dt
 import uuid
 
-from sqlalchemy import DateTime, ForeignKey, String
+from sqlalchemy import DateTime, ForeignKey, Integer, String
 from sqlalchemy.dialects.postgresql import UUID as PG_UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -77,3 +77,10 @@ class Appointment(UUIDPKMixin, TimestampMixin, Base):
         String(30), nullable=False, default=TIPO_AVALIACAO, server_default=TIPO_AVALIACAO
     )
     notes: Mapped[str | None] = mapped_column(String(1000), nullable=True)
+    # Locking otimista: o SQLAlchemy gerencia esta coluna (INSERT=1, e todo UPDATE
+    # faz `SET version=version+1 WHERE id=... AND version=<lido>`). Se outra
+    # transação já alterou a linha, o UPDATE casa 0 linhas e o flush levanta
+    # StaleDataError — o service traduz para 409 (ver scheduling/service.py).
+    version: Mapped[int] = mapped_column(Integer, nullable=False, server_default="1")
+
+    __mapper_args__ = {"version_id_col": version}

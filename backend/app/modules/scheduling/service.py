@@ -13,6 +13,7 @@ from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm.exc import StaleDataError
 
 from app.modules.auth.models import User
 from app.modules.clinics import repository as clinics_repo
@@ -105,6 +106,11 @@ class ConflictError(Conflict):
 
     def __init__(self, detail: str = "Horário indisponível (conflito de agenda)"):
         super().__init__(detail=detail)
+
+
+# Mensagem do conflito de LOCKING OTIMISTA (edição concorrente da mesma linha),
+# distinta do conflito de horário — orienta o cliente a recarregar antes de reenviar.
+_STALE_MSG = "O agendamento foi alterado por outra pessoa. Recarregue a agenda e tente de novo."
 
 
 async def _validate_patient(session, clinic_id, patient_id: uuid.UUID) -> None:
@@ -380,6 +386,8 @@ async def update_appointment(
             await session.flush()
     except IntegrityError:
         raise ConflictError()
+    except StaleDataError:
+        raise ConflictError(_STALE_MSG)
     if appt.status == STATUS_CANCELLED:
         await calendar.delete_event(appt)
     else:
@@ -396,7 +404,11 @@ async def cancel_appointment(
     calendar = calendar or await _calendar_for_clinic(session, clinic_id)
     appt = await get_appointment(session, clinic_id, appointment_id)
     appt.status = STATUS_CANCELLED
-    await session.flush()
+    try:
+        async with session.begin_nested():
+            await session.flush()
+    except StaleDataError:
+        raise ConflictError(_STALE_MSG)
     await calendar.delete_event(appt)
     return appt
 
@@ -410,5 +422,9 @@ async def delete_appointment(
     calendar = calendar or await _calendar_for_clinic(session, clinic_id)
     appt = await get_appointment(session, clinic_id, appointment_id)
     await calendar.delete_event(appt)
-    await session.delete(appt)
-    await session.flush()
+    try:
+        async with session.begin_nested():
+            await session.delete(appt)
+            await session.flush()
+    except StaleDataError:
+        raise ConflictError(_STALE_MSG)
